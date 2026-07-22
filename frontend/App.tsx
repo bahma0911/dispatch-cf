@@ -1639,7 +1639,7 @@ export default function App() {
                 {/* Header card with create button */}
                 <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-xl font-black text-slate-900">Fleet Roster</h2>
+                    <h2 className="text-xl font-black text-slate-900">Driver Roster</h2>
                     <p className="text-xs text-slate-400 font-medium mt-1">Configure dispatcher's driver roster and toggle real-time availability.</p>
                   </div>
                   {currentUser?.username === 'admin' && (
