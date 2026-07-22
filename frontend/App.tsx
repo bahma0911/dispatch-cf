@@ -1387,13 +1387,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="rounded-xl bg-slate-50 p-4 border border-slate-100 flex gap-3.5 items-start">
-                      <div className="flex-shrink-0 mt-0.5">
-                        <Send className="h-5 w-5 text-indigo-600" />
-                      </div>
-
-                    </div>
-
                     <div className="pt-2">
                       <button
                         type="submit"
