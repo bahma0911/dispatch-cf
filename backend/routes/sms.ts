@@ -62,7 +62,7 @@ router.post('/test', authenticateToken, async (req: Request, res: Response) => {
     if (!testPhone) {
       return res.status(400).json({ error: 'Recipient phone number is required' });
     }
-    const messageText = testMessage || 'Metro Dispatch SMS Gateway connection test. If you see this, your gateway integration is fully operational!';
+    const messageText = testMessage || 'Negadras Dispatch SMS Gateway connection test. If you see this, your gateway integration is fully operational!';
     
     const result = await sendSMS('Test Recipient', testPhone, 'CUSTOMER', messageText);
     

@@ -680,19 +680,6 @@ export default function App() {
                 </div>
               )}
 
-              <div className="rounded-lg bg-slate-50 p-4 border border-slate-100 text-xs text-slate-600 space-y-2.5">
-                <p className="font-bold text-slate-700">💡 Available Logins:</p>
-                <div className="space-y-1">
-                  <p className="font-bold text-indigo-700">🔐 System Admin User (Full Access):</p>
-                  <p className="pl-1">Username: <code className="bg-white px-1 py-0.5 border border-slate-200 font-mono rounded">admin</code></p>
-                  <p className="pl-1">Password: <code className="bg-white px-1 py-0.5 border border-slate-200 font-mono rounded">password123</code></p>
-                </div>
-                <div className="border-t border-slate-200 pt-2 space-y-1">
-                  <p className="font-bold text-slate-700">🔑 Dispatcher User (Restricted):</p>
-                  <p className="pl-1">Username: <code className="bg-white px-1 py-0.5 border border-slate-200 font-mono rounded">dispatch</code></p>
-                  <p className="pl-1">Password: <code className="bg-white px-1 py-0.5 border border-slate-200 font-mono rounded">password123</code></p>
-                </div>
-              </div>
 
               <div>
                 <button
@@ -700,7 +687,7 @@ export default function App() {
                   disabled={authLoading}
                   className="w-full flex justify-center py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-bold shadow-lg transition-colors duration-150 focus:outline-none disabled:opacity-50"
                 >
-                  {authLoading ? 'Signing In...' : 'Dispatcher Login'}
+                  {authLoading ? 'Signing In...' : 'Login'}
                 </button>
               </div>
             </form>
@@ -832,7 +819,7 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab('customers')}
-                title={isSidebarCollapsed ? "Customer Directory" : undefined}
+                title={isSidebarCollapsed ? "Account Holders" : undefined}
                 className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center py-3' : 'gap-3 px-3 py-2.5'} rounded-lg font-medium text-xs transition-colors ${
                   activeTab === 'customers'
                     ? 'bg-indigo-50 text-indigo-700 font-semibold'
@@ -840,7 +827,7 @@ export default function App() {
                 }`}
               >
                 <Users className="h-4.5 w-4.5 flex-shrink-0" />
-                {!isSidebarCollapsed && <span>Customer Directory</span>}
+                {!isSidebarCollapsed && <span>Account Holders</span>}
               </button>
 
               <button
@@ -1249,7 +1236,7 @@ export default function App() {
                               : 'text-slate-500 hover:text-slate-800'
                           }`}
                         >
-                          Registered Corporate Account (Credit)
+                          Registered Account Holder (Credit)
                         </button>
                       </div>
                     </div>
@@ -1405,12 +1392,7 @@ export default function App() {
                       <div className="flex-shrink-0 mt-0.5">
                         <Send className="h-5 w-5 text-indigo-600" />
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">SMS Dispatch Automated Pipeline</h4>
-                        <p className="text-xs text-slate-500 font-medium mt-1">
-                          Dispatched orders automatically trigger two separate texts via the gateway: one to the customer with driver ETA/fees, and one to the driver with addresses and billing/collection mandates.
-                        </p>
-                      </div>
+
                     </div>
 
                     <div className="pt-2">
@@ -1419,7 +1401,7 @@ export default function App() {
                         disabled={isDispatching}
                         className="w-full flex justify-center py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-lg shadow-md transition-colors focus:outline-none"
                       >
-                        {isDispatching ? 'Initiating Dispatch Systems...' : '⚡ Discretionary Dispatch & Alert Drivers'}
+                        {isDispatching ? 'Initiating Dispatch Systems...' : '⚡ Dispatch & Alert Driver'}
                       </button>
                     </div>
                   </form>
@@ -1534,18 +1516,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Pricing Strategy info card */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-900 flex items-center">
-                      <AlertCircle className="h-4.5 w-4.5 mr-1.5 text-indigo-600" />
-                      Dispatching Standards
-                    </h3>
-                    <ul className="text-xs text-slate-500 font-medium space-y-2 list-disc list-inside">
-                      <li>Ensure call-taker has confirmed precise apartment/suite numbers.</li>
-                      <li>Double check drivers current location is matching pickup zone.</li>
-                      <li>Account credit orders accumulate instantly to statement invoices upon <strong>Delivery completion</strong>.</li>
-                    </ul>
-                  </div>
                 </div>
               </motion.div>
             )}
@@ -1561,7 +1531,7 @@ export default function App() {
                 {/* Header card with create button */}
                 <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-xl font-black text-slate-900">Customers Profiles & Ledgers</h2>
+                    <h2 className="text-xl font-black text-slate-900"> Account Holders </h2>
                     <p className="text-xs text-slate-400 font-medium mt-1">Manage delivery client directory and corporate accounts credit limits.</p>
                   </div>
                   {currentUser?.username === 'admin' && (
@@ -1768,7 +1738,7 @@ export default function App() {
                     </h2>
                     <p className="text-xs text-slate-500 font-medium leading-relaxed">
                       Configure your local Android SMS Gateway to dispatch real SMS notifications to customers and dispatchers. 
-                      Since Metro Dispatch is hosted in the Cloud, you must provide a public address (e.g., ngrok tunnel or port forwarded static IP) for live automated dispatch triggers.
+                      Since Negadras Dispatch is hosted in the Cloud, you must provide a public address (e.g., ngrok tunnel or port forwarded static IP) for live automated dispatch triggers.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -2024,7 +1994,7 @@ export default function App() {
                           <textarea
                             value={testMessage}
                             onChange={(e) => setTestMessage(e.target.value)}
-                            placeholder="Metro Dispatch test alert. Operational check."
+                            placeholder="Negadras Dispatch test alert. Operational check."
                             rows={2}
                             className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 font-sans"
                           />
@@ -2135,7 +2105,7 @@ export default function App() {
                     </div>
                     <h2 className="text-2xl font-black mt-2 flex items-center">
                       <KeyRound className="h-6 w-6 mr-2 text-indigo-400" />
-                      Metro Admin Control Center
+                      Negadras Admin Control Center
                     </h2>
                     <p className="text-xs text-slate-300 font-medium mt-1">
                       Privileged actions only. Securely register new client corporate accounts, manage driver rosters, and adjust balances.
@@ -2275,7 +2245,7 @@ export default function App() {
 
       {/* Mini informational Footer */}
       <footer className="bg-white border-t border-slate-200 py-4 text-center text-[10px] text-slate-400 font-bold tracking-wider uppercase">
-        Metro Dispatch System v1.0.0 • Persistent Mock Storage Activated • Port 3000 Ingress Operational
+        Negadras Dispatch System v1.0.0
       </footer>
 
       {/* Settle Balance Custom Confirmation Dialog */}
