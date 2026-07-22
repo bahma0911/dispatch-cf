@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
-import { authRateLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'delivery-app-secure-jwt-secret-key-2026';

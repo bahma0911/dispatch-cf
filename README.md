@@ -11,7 +11,7 @@ This platform allows company dispatchers (Staff/Admins) to register customers, m
 - **Frontend**: React 19, Tailwind CSS, Lucide Icons, and Motion.
 - **Backend**: Node.js, Express, TypeScript, and Bundled via `esbuild`.
 - **Database**: MongoDB Atlas in production, with a local JSON fallback when `MONGODB_URI` is omitted.
-- **Security**: JWT-based Authentication, custom sliding-window IP rate limiting, and password hashing via `bcryptjs`.
+- **Security**: JWT-based Authentication and password hashing via `bcryptjs`.
 - **Integrations**: Excel compilation via SheetJS (`xlsx`) and Basic Auth Android SMS Gateway protocol.
 
 ---
@@ -28,7 +28,6 @@ This platform allows company dispatchers (Staff/Admins) to register customers, m
 │   ├── db.ts               # MongoDB Mongoose-like file persistence database
 │   ├── middleware/
 │   │   ├── auth.ts         # JWT security middleware
-│   │   └── rateLimiter.ts  # Custom sliding-window IP rate limit middleware
 │   ├── models/
 │   │   ├── User.ts         # Dispatcher admin schema
 │   │   ├── Customer.ts     # Clients/Account Holders schema
@@ -91,9 +90,6 @@ The local persistence file database (`/backend/db.ts`) mirrors standard MongoDB 
    All client requests (excluding `/api/auth/login` and `/api/auth/register`) must append `Authorization: Bearer <JWT_TOKEN>` header.
 2. **Password Cryptography**: 
    Hashed safely with `bcryptjs` before committing to the mock DB layer.
-3. **Dispatcher Rate Limiting**:
-   - `/api/` (Default API Rate Limiter): Maximum 100 requests per 15 minutes per IP.
-   - `/api/auth/` (Strict Authentication Limiter): Maximum 10 attempts per 15 minutes per IP to avoid brute-forcing.
 
 ---
 

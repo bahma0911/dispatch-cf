@@ -11,7 +11,6 @@ import customersRouter from './backend/routes/customers';
 import driversRouter from './backend/routes/drivers';
 import ordersRouter from './backend/routes/orders';
 import smsRouter from './backend/routes/sms';
-import { defaultRateLimiter } from './backend/middleware/rateLimiter';
 import { connectDatabase } from './backend/db';
 import { seedDefaultUser } from './backend/routes/auth';
 
@@ -29,9 +28,6 @@ async function startServer() {
   // JSON and URL-encoded body parsers
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-
-  // Global rate limiter for security
-  app.use('/api/', defaultRateLimiter);
 
   // Register backend API routes
   app.use('/api/auth', authRouter);
