@@ -1594,7 +1594,10 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {customers.filter((c) => c.type === 'ACCOUNT_HOLDER').map((c) => (
+                        {customers
+                          .filter((c) => c.type === 'ACCOUNT_HOLDER')
+                          .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+                          .map((c) => (
                           <tr key={c._id} className="hover:bg-slate-50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-bold text-slate-800">{c.name}</div>
@@ -1647,7 +1650,7 @@ export default function App() {
                               )}
                             </td>
                           </tr>
-                        ))}
+                          ))}
                       </tbody>
                     </table>
                   </div>
@@ -1686,7 +1689,10 @@ export default function App() {
 
                 {/* Fleet Directory Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {drivers.map((driver) => (
+                  {drivers
+                    .slice()
+                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+                    .map((driver) => (
                     <div key={driver._id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 hover:border-slate-300 transition-colors">
                       <div className="flex items-start justify-between">
                         <div>
