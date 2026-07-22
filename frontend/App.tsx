@@ -68,7 +68,6 @@ export default function App() {
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
   const [newCustAddress, setNewCustAddress] = useState('');
-  const [newCustType, setNewCustType] = useState<'NORMAL' | 'ACCOUNT_HOLDER'>('ACCOUNT_HOLDER');
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
   // Form States - Create Driver
@@ -244,7 +243,6 @@ export default function App() {
           name: newCustName,
           phone: newCustPhone,
           address: newCustAddress,
-          type: newCustType
         })
       });
 
@@ -256,7 +254,6 @@ export default function App() {
         setNewCustName('');
         setNewCustPhone('');
         setNewCustAddress('');
-        setNewCustType('NORMAL');
         setIsCreatingCustomer(false);
       } else {
         showToast(data.error || 'Could not add customer.', 'error');
@@ -2198,14 +2195,9 @@ export default function App() {
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
                           Account Profile Type
                         </label>
-                        <select
-                          value={newCustType}
-                          onChange={(e) => setNewCustType(e.target.value as 'NORMAL' | 'ACCOUNT_HOLDER')}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
-                        >
-                          <option value="ACCOUNT_HOLDER">REGISTERED CORPORATE (Credit Terms Enabled)</option>
-                          <option value="NORMAL">WALK-IN ONLY (Cash Terms)</option>
-                        </select>
+                        <div className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 font-medium">
+                          REGISTERED CORPORATE (Credit Terms Enabled)
+                        </div>
                       </div>
 
                       <button

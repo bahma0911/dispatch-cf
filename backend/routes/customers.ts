@@ -47,7 +47,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       return;
     }
 
-    const { name, phone, address, type } = req.body;
+    const { name, phone, address } = req.body;
 
     if (!name || !phone) {
       res.status(400).json({ error: 'Name and Phone number are required' });
@@ -64,7 +64,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       name,
       phone,
       address: address || '',
-      type: type || 'NORMAL',
+      type: 'ACCOUNT_HOLDER',
       creditBalance: 0.0
     });
 
