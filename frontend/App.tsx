@@ -1200,7 +1200,6 @@ export default function App() {
                       <PhoneCall className="h-5 w-5 mr-2 text-indigo-600 animate-pulse" />
                       Incoming Call Dispatch Console
                     </h2>
-                    <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">STEP 1 OF 2</span>
                   </div>
 
                   <form onSubmit={handleDispatchOrder} className="space-y-5">
