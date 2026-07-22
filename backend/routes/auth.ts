@@ -9,7 +9,7 @@ const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'delivery-app-secure-jwt-secret-key-2026';
 
 // Seed a default admin/dispatcher on first start
-async function seedDefaultUser() {
+export async function seedDefaultUser() {
   try {
     const existing = await User.findOne({ username: 'admin' });
     if (!existing) {
@@ -38,7 +38,6 @@ async function seedDefaultUser() {
     console.error('Error seeding default users', err);
   }
 }
-seedDefaultUser();
 
 /**
  * @route POST /api/auth/register

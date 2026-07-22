@@ -13,6 +13,7 @@ import ordersRouter from './backend/routes/orders';
 import smsRouter from './backend/routes/sms';
 import { defaultRateLimiter } from './backend/middleware/rateLimiter';
 import { connectDatabase } from './backend/db';
+import { seedDefaultUser } from './backend/routes/auth';
 
 async function startServer() {
   const app = express();
@@ -23,6 +24,7 @@ async function startServer() {
   } else {
     console.warn('MONGODB_URI is not configured; using the local JSON database fallback.');
   }
+  await seedDefaultUser();
 
   // JSON and URL-encoded body parsers
   app.use(express.json());
