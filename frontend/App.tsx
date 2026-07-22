@@ -622,7 +622,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 select-none">
         <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-indigo-600 text-white mb-4 shadow-sm">
-            <Truck className="h-6 w-6" />
+            <img src="/nega-logo.png" alt="Negadras Express" className="h-12 w-12 rounded-xl object-cover" />
           </div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">
             Negadras Dispatch Engine
@@ -735,8 +735,8 @@ export default function App() {
       <header className="bg-white border-b border-slate-200 text-slate-800 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-sm">
-              <Truck className="h-4.5 w-4.5" />
+            <div className="h-10 w-10 rounded-lg bg-white flex items-center justify-center shadow-sm overflow-hidden">
+              <img src="/nega-logo.png" alt="Negadras Express" className="h-10 w-10 object-cover" />
             </div>
             <div>
               <h1 className="text-base font-black tracking-tight text-slate-900">Negadras Dispatch Engine</h1>
