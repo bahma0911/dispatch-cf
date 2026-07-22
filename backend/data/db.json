@@ -1,0 +1,124 @@
+{
+  "users": [
+    {
+      "_id": "yukmg6858mrvzsc4j",
+      "username": "admin",
+      "passwordHash": "$2b$10$QnFZG1mEh6cUdC8/naDP8uQYp4aDa8MnvNYq8.gxDvMIFmh/02uxq",
+      "name": "Abebe Kebede (Admin)",
+      "role": "ADMIN",
+      "createdAt": "2026-07-22T11:21:33.283Z"
+    },
+    {
+      "_id": "keqii2zzqmrvzsc7l",
+      "username": "dispatch",
+      "passwordHash": "$2b$10$NcJ08uzixux7JfarT8voruQJfwOzYGp9eXM2iccZQl13RgzNcRNQe",
+      "name": "Almaz Tesfaye (Dispatch)",
+      "role": "DISPATCHER",
+      "createdAt": "2026-07-22T11:21:33.393Z"
+    }
+  ],
+  "customers": [
+    {
+      "_id": "cust-1",
+      "name": "Chala Kebede",
+      "phone": "555-0101",
+      "address": "Bole, Behind Friendship Mall, Addis Ababa",
+      "type": "NORMAL",
+      "creditBalance": 0
+    },
+    {
+      "_id": "cust-2",
+      "name": "Ambo Mineral Water",
+      "phone": "555-0202",
+      "address": "Lideta, Industrial Zone, Addis Ababa",
+      "type": "ACCOUNT_HOLDER",
+      "creditBalance": 0
+    },
+    {
+      "_id": "cust-3",
+      "name": "Marta Hailu",
+      "phone": "555-0303",
+      "address": "Megenagna, Diaspora Building, Addis Ababa",
+      "type": "NORMAL",
+      "creditBalance": 0
+    },
+    {
+      "_id": "i3v5sktqamrw0725y",
+      "name": "abe",
+      "phone": "0911",
+      "address": "bole",
+      "type": "ACCOUNT_HOLDER",
+      "creditBalance": 0,
+      "createdAt": "2026-07-22T11:33:00.214Z"
+    }
+  ],
+  "drivers": [
+    {
+      "_id": "drv-1",
+      "name": "Dawit Hailu",
+      "phone": "555-1001",
+      "status": "AVAILABLE"
+    },
+    {
+      "_id": "drv-2",
+      "name": "Selamawit Tekle",
+      "phone": "555-1002",
+      "status": "AVAILABLE"
+    },
+    {
+      "_id": "drv-3",
+      "name": "Yared Yosef",
+      "phone": "555-1003",
+      "status": "BUSY"
+    }
+  ],
+  "orders": [
+    {
+      "_id": "ord-1",
+      "orderNumber": 1001,
+      "customer": "cust-1",
+      "driver": "drv-1",
+      "pickupAddress": "Mercato, Shola",
+      "deliveryAddress": "Bole, Behind Friendship Mall, Addis Ababa",
+      "fee": 150,
+      "paymentType": "CASH",
+      "paymentStatus": "PAID",
+      "orderStatus": "DELIVERED",
+      "createdAt": "2026-07-21T11:21:32.860Z"
+    },
+    {
+      "_id": "ord-2",
+      "orderNumber": 1002,
+      "customer": "cust-2",
+      "driver": "drv-2",
+      "pickupAddress": "Lideta, Industrial Zone",
+      "deliveryAddress": "Megenagna, Diaspora Building, Addis Ababa",
+      "fee": 450,
+      "paymentType": "CREDIT",
+      "paymentStatus": "SETTLED",
+      "orderStatus": "CANCELLED",
+      "createdAt": "2026-07-22T09:21:32.860Z"
+    },
+    {
+      "_id": "kwdu3scxwmrw07l3g",
+      "customer": "i3v5sktqamrw0725y",
+      "driver": "drv-2",
+      "pickupAddress": "bole",
+      "deliveryAddress": "home",
+      "fee": 150,
+      "paymentType": "CREDIT",
+      "paymentStatus": "SETTLED",
+      "orderStatus": "DELIVERED",
+      "createdAt": "2026-07-22T11:33:24.748Z",
+      "orderNumber": 1003
+    }
+  ],
+  "smsConfig": {
+    "localAddress": "https://api.sms-gate.app:443",
+    "publicAddress": "https://api.sms-gate.app",
+    "username": "2U4EAD",
+    "password": "opw1ykltcxnsa9",
+    "deviceId": "VKcoNgx7H3sDBNGGHbq8Z",
+    "activeAddressType": "public"
+  }
+}

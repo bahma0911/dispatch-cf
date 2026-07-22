@@ -1,0 +1,6 @@
+{
+  "name": "Negadras Dispatch Engine",
+  "description": "A lightweight full-stack order dispatcher console and driver fleet tracking portal with itemized credit balances, simulated SMS delivery gates, and automated Excel statement log exports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
