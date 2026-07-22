@@ -10,7 +10,7 @@ This platform allows company dispatchers (Staff/Admins) to register customers, m
 
 - **Frontend**: React 19, Tailwind CSS, Lucide Icons, and Motion.
 - **Backend**: Node.js, Express, TypeScript, and Bundled via `esbuild`.
-- **Database**: Persistent, lightweight file-backed MongoDB mock adapter (persisted locally under `/backend/data/db.json` with zero extra configuration required).
+- **Database**: MongoDB Atlas in production, with a local JSON fallback when `MONGODB_URI` is omitted.
 - **Security**: JWT-based Authentication, custom sliding-window IP rate limiting, and password hashing via `bcryptjs`.
 - **Integrations**: Excel compilation via SheetJS (`xlsx`) and Basic Auth Android SMS Gateway protocol.
 
@@ -120,11 +120,14 @@ Outgoing SMS are sent using an HTTP Basic Auth `POST` request matching the admin
 ## 🚀 Setup & Local Execution Instructions
 
 ### 1. Configure Environment Variables (`.env`)
-Create a `.env` file at the root of the project:
+Create a `.env` file at the root of the project, or add these variables in Render:
 ```env
-# Server details
 PORT=3000
-JWT_SECRET="delivery-app-secure-jwt-secret-key-2026"
+NODE_ENV=production
+APP_URL=https://nega.bahma.com.et
+MONGODB_URI=mongodb+srv://<db_username>:<db_password>@group.sovx7as.mongodb.net/?appName=nega
+MONGODB_DB_NAME=nega
+JWT_SECRET="replace-with-a-long-random-secret"
 
 # Android SMS Gateway credentials
 SMS_GATEWAY_ADDRESS="https://my-sms-gateway-endpoint.com"
@@ -132,6 +135,8 @@ SMS_GATEWAY_USERNAME="gateway-user"
 SMS_GATEWAY_PASSWORD="gateway-password"
 SMS_GATEWAY_DEVICE_ID="android-device-identifier-1"
 ```
+
+On Render, use `npm install` as the build command and `npm run build` as the build step if dependencies are not installed automatically. Use `npm start` as the start command. Add `nega.bahma.com.et` as a custom domain and point its DNS record to the hostname Render provides.
 
 ### 2. Boot Up Development Servers
 Launch both Vite and Express concurrent routing inside the sandbox or your console:

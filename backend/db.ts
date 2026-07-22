@@ -1,5 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
+import { Collection, Db, MongoClient } from 'mongodb';
+
+dotenv.config();
 
 // Simple helper to generate unique IDs
 export function generateId(): string {
@@ -8,6 +12,36 @@ export function generateId(): string {
 
 const DATA_DIR = path.join(process.cwd(), 'backend', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
+const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'nega';
+let mongoClient: MongoClient | null = null;
+let mongoDb: Db | null = null;
+let mongoConnection: Promise<Db> | null = null;
+
+export async function connectDatabase(): Promise<Db | null> {
+  if (!MONGODB_URI) return null;
+  if (mongoDb) return mongoDb;
+  if (!mongoConnection) {
+    mongoConnection = MongoClient.connect(MONGODB_URI).then((client) => {
+      mongoClient = client;
+      mongoDb = client.db(MONGODB_DB_NAME);
+      console.log(`MongoDB connected to database "${MONGODB_DB_NAME}"`);
+      return mongoDb;
+    }).catch((error) => {
+      mongoConnection = null;
+      console.error('MongoDB connection failed:', error.message);
+      throw error;
+    });
+  }
+  return mongoConnection;
+}
+
+export async function closeDatabase(): Promise<void> {
+  if (mongoClient) await mongoClient.close();
+  mongoClient = null;
+  mongoDb = null;
+  mongoConnection = null;
+}
 
 // Ensure database directory and file exist
 if (!fs.existsSync(DATA_DIR)) {
@@ -176,6 +210,11 @@ export class MockDatabase {
 export class Model<T extends { _id?: string; [key: string]: any }> {
   constructor(private collectionName: keyof DbData) {}
 
+  private async getMongoCollection(): Promise<Collection<T> | null> {
+    const database = await connectDatabase();
+    return database ? database.collection<T>(this.collectionName) : null;
+  }
+
   private getItems(): T[] {
     return MockDatabase.getCollection(this.collectionName);
   }
@@ -185,6 +224,11 @@ export class Model<T extends { _id?: string; [key: string]: any }> {
   }
 
   async find(query: Partial<T> | ((item: T) => boolean) = {}): Promise<T[]> {
+    const collection = await this.getMongoCollection();
+    if (collection) {
+      if (typeof query === 'function') return collection.find({}).toArray() as unknown as T[];
+      return collection.find(query as any).toArray() as unknown as T[];
+    }
     const items = this.getItems();
     if (typeof query === 'function') {
       return items.filter(query);
@@ -200,15 +244,40 @@ export class Model<T extends { _id?: string; [key: string]: any }> {
   }
 
   async findOne(query: Partial<T> | ((item: T) => boolean) = {}): Promise<T | null> {
+    const collection = await this.getMongoCollection();
+    if (collection) {
+      if (typeof query === 'function') {
+        const items = await collection.find({}).toArray() as unknown as T[];
+        return items.find(query) || null;
+      }
+      return collection.findOne(query as any) as unknown as T | null;
+    }
     const results = await this.find(query);
     return results.length > 0 ? results[0] : null;
   }
 
   async findById(id: string): Promise<T | null> {
+    const collection = await this.getMongoCollection();
+    if (collection) return collection.findOne({ _id: id } as any) as unknown as T | null;
     return this.findOne({ _id: id } as any);
   }
 
   async create(doc: Omit<T, '_id'> & { _id?: string }): Promise<T> {
+    const collection = await this.getMongoCollection();
+    if (collection) {
+      const newDoc = {
+        _id: doc._id || generateId(),
+        ...doc,
+        createdAt: doc.createdAt || new Date().toISOString()
+      } as unknown as T;
+
+      if (this.collectionName === 'orders' && !newDoc.orderNumber) {
+        const latest = await collection.find({}).sort({ orderNumber: -1 }).limit(1).next();
+        (newDoc as any).orderNumber = (Number((latest as any)?.orderNumber) || 1000) + 1;
+      }
+      await collection.insertOne(newDoc as any);
+      return newDoc;
+    }
     const items = this.getItems();
     const newDoc = {
       _id: doc._id || generateId(),
@@ -228,6 +297,15 @@ export class Model<T extends { _id?: string; [key: string]: any }> {
   }
 
   async findByIdAndUpdate(id: string, update: Partial<T>): Promise<T | null> {
+    const collection = await this.getMongoCollection();
+    if (collection) {
+      const result = await collection.findOneAndUpdate(
+        { _id: id } as any,
+        { $set: update },
+        { returnDocument: 'after' }
+      );
+      return result as unknown as T | null;
+    }
     const items = this.getItems();
     const index = items.findIndex((item) => item._id === id);
     if (index === -1) return null;
@@ -242,6 +320,11 @@ export class Model<T extends { _id?: string; [key: string]: any }> {
   }
 
   async updateOne(query: Partial<T>, update: Partial<T>): Promise<{ modifiedCount: number }> {
+    const collection = await this.getMongoCollection();
+    if (collection) {
+      const result = await collection.updateMany(query as any, { $set: update });
+      return { modifiedCount: result.modifiedCount };
+    }
     const items = this.getItems();
     let modifiedCount = 0;
     const updatedItems = items.map((item) => {
@@ -266,12 +349,32 @@ export class Model<T extends { _id?: string; [key: string]: any }> {
   }
 
   async countDocuments(query: Partial<T> = {}): Promise<number> {
+    const collection = await this.getMongoCollection();
+    if (collection) return collection.countDocuments(query as any);
     const results = await this.find(query);
     return results.length;
   }
 
   // Populate references
   async populate(items: any[], paths: string | string[]): Promise<any[]> {
+    const collection = await this.getMongoCollection();
+    if (collection) {
+      const fields = Array.isArray(paths) ? paths : [paths];
+      const result = items.map((item) => ({ ...item }));
+      for (const field of fields) {
+        if (field !== 'customer' && field !== 'driver') continue;
+        const referencedCollection = await connectDatabase();
+        const references = referencedCollection
+          ? await referencedCollection.collection(field === 'customer' ? 'customers' : 'drivers').find({}).toArray()
+          : [];
+        for (const item of result) {
+          if (typeof item[field] === 'string') {
+            item[field] = references.find((reference) => reference._id === item[field]) || item[field];
+          }
+        }
+      }
+      return result;
+    }
     const fields = Array.isArray(paths) ? paths : [paths];
     const result = [...items];
 
@@ -311,8 +414,10 @@ export const model = (name: string, schema?: any) => {
 export const mongooseMock = {
   Schema,
   model,
-  connect: async () => console.log('Mock MongoDB Connected Successfully (File-based)'),
+  connect: connectDatabase,
   connection: {
-    readyState: 1
+    get readyState() {
+      return MONGODB_URI && mongoDb ? 1 : 0;
+    }
   }
 };

@@ -12,10 +12,17 @@ import driversRouter from './backend/routes/drivers';
 import ordersRouter from './backend/routes/orders';
 import smsRouter from './backend/routes/sms';
 import { defaultRateLimiter } from './backend/middleware/rateLimiter';
+import { connectDatabase } from './backend/db';
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
+
+  if (process.env.MONGODB_URI) {
+    await connectDatabase();
+  } else {
+    console.warn('MONGODB_URI is not configured; using the local JSON database fallback.');
+  }
 
   // JSON and URL-encoded body parsers
   app.use(express.json());
@@ -33,7 +40,11 @@ async function startServer() {
 
   // Static API Health check
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({
+      status: 'ok',
+      database: process.env.MONGODB_URI ? 'mongodb' : 'file-fallback',
+      timestamp: new Date().toISOString()
+    });
   });
 
   // Serve static assets or mount Vite dev server
