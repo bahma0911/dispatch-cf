@@ -10,7 +10,10 @@ export function generateId(): string {
   return Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
 }
 
-const DATA_DIR = path.join(process.cwd(), 'backend', 'data');
+const DATA_DIR = [
+  path.resolve(__dirname, 'data'),
+  path.resolve(__dirname, '..', 'backend', 'data')
+].find((directory) => fs.existsSync(directory)) || path.resolve(process.cwd(), 'backend', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'nega';
@@ -61,9 +64,9 @@ const defaultData: DbData = {
   smsConfig: {
     localAddress: 'https://api.sms-gate.app:443',
     publicAddress: 'https://api.sms-gate.app',
-    username: '2U4EAD',
-    password: 'opw1ykltcxnsa9',
-    deviceId: 'VKcoNgx7H3sDBNGGHbq8Z',
+    username: 'D9AKJO',
+    password: 'ABC123DEF456GHI',
+    deviceId: 'siASVr66U2RdhDeqQ3FDm',
     activeAddressType: 'public'
   },
   customers: [

@@ -116,9 +116,9 @@
   "smsConfig": {
     "localAddress": "https://api.sms-gate.app:443",
     "publicAddress": "https://api.sms-gate.app",
-    "username": "2U4EAD",
-    "password": "opw1ykltcxnsa9",
-    "deviceId": "VKcoNgx7H3sDBNGGHbq8Z",
+    "username": "D9AKJO",
+    "password": "ABC123DEF456GHI",
+    "deviceId": "siASVr66U2RdhDeqQ3FDm",
     "activeAddressType": "public"
   }
 }
