@@ -12,6 +12,7 @@ export interface Driver {
   name: string;
   phone: string;
   status: 'AVAILABLE' | 'BUSY' | 'INACTIVE';
+  commissionBalance: number;
 }
 
 export interface Order {

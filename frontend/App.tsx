@@ -97,6 +97,8 @@ export default function App() {
   // Custom Settle Balance Modal States
   const [customerToSettle, setCustomerToSettle] = useState<Customer | null>(null);
   const [isSettlingInProgress, setIsSettlingInProgress] = useState(false);
+  const [driverToSettle, setDriverToSettle] = useState<Driver | null>(null);
+  const [isDriverSettlingInProgress, setIsDriverSettlingInProgress] = useState(false);
 
   // SMS Gateway Config States
   const [smsConfig, setSmsConfig] = useState({
@@ -414,6 +416,37 @@ export default function App() {
     }
   };
 
+  // Driver commission settlement helpers
+  const handleSettleDriverCommission = (driverId: string) => {
+    const driver = drivers.find((item) => item._id === driverId);
+    if (!driver) return;
+    setDriverToSettle(driver);
+  };
+
+  const executeSettleDriverCommission = async () => {
+    if (!driverToSettle) return;
+    setIsDriverSettlingInProgress(true);
+    try {
+      const res = await fetch(`/api/drivers/${driverToSettle._id}/settle`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message, 'success');
+        await fetchDashboardData();
+        setDriverToSettle(null);
+      } else {
+        showToast(data.error || 'Failed to settle driver commission.', 'error');
+      }
+    } catch (err) {
+      showToast('Error communicating with server.', 'error');
+    } finally {
+      setIsDriverSettlingInProgress(false);
+    }
+  };
+
   // Fetch SMS Gateway Settings
   const fetchSmsConfig = async () => {
     if (!token) return;
@@ -602,6 +635,28 @@ export default function App() {
       showToast(`Statement exported for ${name}.`, 'success');
     } catch (err: any) {
       showToast(err.message || 'Statement export failed.', 'error');
+    }
+  };
+
+  const downloadDriverCommissionExcel = async () => {
+    try {
+      const res = await fetch('/api/drivers/export/commission', { headers: getAuthHeaders() });
+      if (!res.ok) {
+        throw new Error('Could not download driver commission report');
+      }
+
+      const blob = await res.blob();
+      const fileUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = fileUrl;
+      a.download = 'Driver_Commission_Report.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(fileUrl);
+      showToast('Driver commission report downloaded.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Commission export failed.', 'error');
     }
   };
 
@@ -1685,19 +1740,28 @@ export default function App() {
                     <h2 className="text-xl font-black text-slate-900">Driver Roster</h2>
                     <p className="text-xs text-slate-400 font-medium mt-1">Configure dispatcher's driver roster and toggle real-time availability.</p>
                   </div>
-                  {currentUser?.username === 'admin' && (
+                  <div className="flex items-center gap-2 self-start">
                     <button
-                      onClick={() => {
-                        setIsCreatingDriver(true);
-                        showToast('Use driver registration module under Dispatch tab.', 'info');
-                        setActiveTab('dispatch');
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors shadow-sm self-start"
+                      onClick={downloadDriverCommissionExcel}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors shadow-sm"
                     >
-                      <Plus className="h-4 w-4 text-indigo-600" />
-                      <span>Add Driver</span>
+                      <FileSpreadsheet className="h-4 w-4 text-indigo-600" />
+                      <span>Download Excel Report</span>
                     </button>
-                  )}
+                    {currentUser?.username === 'admin' && (
+                      <button
+                        onClick={() => {
+                          setIsCreatingDriver(true);
+                          showToast('Use driver registration module under Dispatch tab.', 'info');
+                          setActiveTab('dispatch');
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors shadow-sm"
+                      >
+                        <Plus className="h-4 w-4 text-indigo-600" />
+                        <span>Add Driver</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Fleet Directory Grid */}
@@ -1724,6 +1788,21 @@ export default function App() {
                       </div>
 
                       <div className="border-t border-slate-100 pt-3">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Commission Balance</p>
+                            <p className="text-lg font-black text-indigo-600">Br {Number(driver.commissionBalance || 0).toFixed(2)}</p>
+                            <p className="text-[10px] text-slate-400 font-medium">10% of completed delivery fees</p>
+                          </div>
+                          {Number(driver.commissionBalance || 0) > 0 && (
+                            <button
+                              onClick={() => handleSettleDriverCommission(driver._id)}
+                              className="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm"
+                            >
+                              Settle Commission
+                            </button>
+                          )}
+                        </div>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">Set Dispatcher Status:</p>
                         <div className="grid grid-cols-3 gap-1">
                           <button
@@ -2347,6 +2426,77 @@ export default function App() {
                     className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-md transition-colors disabled:opacity-50 flex items-center gap-1"
                   >
                     {isSettlingInProgress ? (
+                      <>
+                        <span className="animate-spin inline-block h-3 w-3 border-2 border-white border-t-transparent rounded-full mr-1" />
+                        <span>Settling...</span>
+                      </>
+                    ) : (
+                      <span>Confirm Settlement</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Driver Commission Settlement Confirmation Dialog */}
+      <AnimatePresence>
+        {driverToSettle && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden"
+            >
+              <div className="p-6 space-y-4 text-left">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg flex-shrink-0">
+                    <DollarSign className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">Settle Driver Commission</h3>
+                    <p className="text-xs text-slate-500 font-medium mt-1">
+                      Confirm payment of the accumulated commission for <strong className="text-slate-800">{driverToSettle.name}</strong>?
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 font-medium">Driver:</span>
+                    <span className="text-slate-800 font-bold">{driverToSettle.name}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 font-medium">Phone number:</span>
+                    <span className="text-slate-800 font-mono font-medium">{driverToSettle.phone}</span>
+                  </div>
+                  <div className="flex justify-between text-xs border-t border-slate-200/60 pt-2">
+                    <span className="text-slate-500 font-bold">Commission to pay:</span>
+                    <span className="text-indigo-600 font-black text-sm">Br {Number(driverToSettle.commissionBalance || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                  This action records the monthly commission as paid and resets the driver&apos;s commission balance to <strong className="text-slate-600">Br 0.00</strong>.
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    disabled={isDriverSettlingInProgress}
+                    onClick={() => setDriverToSettle(null)}
+                    className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={isDriverSettlingInProgress}
+                    onClick={executeSettleDriverCommission}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-md transition-colors disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {isDriverSettlingInProgress ? (
                       <>
                         <span className="animate-spin inline-block h-3 w-3 border-2 border-white border-t-transparent rounded-full mr-1" />
                         <span>Settling...</span>

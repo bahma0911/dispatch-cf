@@ -1,8 +1,33 @@
 import { Router, Request, Response } from 'express';
 import { Driver } from '../models/Driver';
+import { Order } from '../models/Order';
+import { CommissionSettlement } from '../models/CommissionSettlement';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { generateDriverCommissionExcel } from '../utils/excelExport';
 
 const router = Router();
+
+/**
+ * @route GET /api/drivers/export/commission
+ * @desc Export driver commission summary and completed delivery details
+ */
+router.get('/export/commission', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const drivers = await Driver.find();
+    const orders = await Order.find({ orderStatus: 'DELIVERED' });
+    const populatedOrders = await Order.populate(orders, ['driver']);
+    populatedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const settlements = await CommissionSettlement.find();
+    settlements.sort((a, b) => new Date(b.settledAt).getTime() - new Date(a.settledAt).getTime());
+
+    const buffer = generateDriverCommissionExcel(drivers, populatedOrders, settlements);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=Driver_Commission_Report.xlsx');
+    res.end(buffer);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 /**
  * @route GET /api/drivers
@@ -11,7 +36,10 @@ const router = Router();
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const list = await Driver.find();
-    res.json(list);
+    res.json(list.map((driver) => ({
+      ...driver,
+      commissionBalance: Number(driver.commissionBalance || 0)
+    })));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -39,7 +67,8 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
     const newDriver = await Driver.create({
       name,
       phone,
-      status: status || 'AVAILABLE'
+      status: status || 'AVAILABLE',
+      commissionBalance: 0
     });
 
     res.status(201).json(newDriver);
@@ -65,10 +94,44 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     const updated = await Driver.findByIdAndUpdate(req.params.id, {
       name: name ?? existing.name,
       phone: phone ?? existing.phone,
-      status: status ?? existing.status
+      status: status ?? existing.status,
+      commissionBalance: Number(existing.commissionBalance || 0)
     });
 
     res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @route POST /api/drivers/:id/settle
+ * @desc Settle the driver's accumulated commission back to 0.00
+ */
+router.post('/:id/settle', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const driver = await Driver.findById(req.params.id);
+    if (!driver) {
+      res.status(404).json({ error: 'Driver not found' });
+      return;
+    }
+
+    const amount = Number(driver.commissionBalance || 0);
+    if (amount > 0) {
+      await CommissionSettlement.create({
+        driver: driver._id,
+        driverName: driver.name,
+        driverPhone: driver.phone,
+        amount,
+        settledAt: new Date().toISOString()
+      });
+    }
+
+    await Driver.findByIdAndUpdate(req.params.id, { commissionBalance: 0.00 });
+
+    res.json({
+      message: `Commission settled successfully for ${driver.name}. Balance reset to Br 0.00.`
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

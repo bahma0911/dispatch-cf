@@ -5,6 +5,7 @@ export interface IDriver {
   name: string;
   phone: string;
   status: 'AVAILABLE' | 'BUSY' | 'INACTIVE';
+  commissionBalance: number;
   createdAt?: string;
 }
 

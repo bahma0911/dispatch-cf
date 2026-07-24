@@ -195,6 +195,18 @@ router.put('/:id/status', authenticateToken, async (req: Request, res: Response)
       }
     }
 
+    // Add the driver's 10% commission once when the delivery is completed.
+    if (newStatus === 'DELIVERED' && oldStatus !== 'DELIVERED') {
+      const driverId = typeof order.driver === 'object' && order.driver !== null ? order.driver._id : order.driver;
+      const driver = await Driver.findById(driverId);
+      if (driver) {
+        const commission = Number(order.fee || 0) * 0.10;
+        const updatedCommissionBalance = Number(driver.commissionBalance || 0) + commission;
+        await Driver.findByIdAndUpdate(driver._id, { commissionBalance: updatedCommissionBalance });
+        console.log(`Added driver commission Br ${commission.toFixed(2)} to ${driver.name}. New balance: Br ${updatedCommissionBalance.toFixed(2)}`);
+      }
+    }
+
     const populated = (await Order.populate([updated], ['customer', 'driver']))[0];
     res.json(populated);
   } catch (error: any) {

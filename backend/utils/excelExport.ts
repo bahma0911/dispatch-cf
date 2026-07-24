@@ -119,3 +119,107 @@ export function generateAccountStatementExcel(customer: any, orders: any[]): Buf
   XLSX.utils.book_append_sheet(wb, ws, 'Account Statement');
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
 }
+
+/**
+ * Generates an Excel spreadsheet for driver commission accounting
+ */
+export function generateDriverCommissionExcel(drivers: any[], deliveredOrders: any[], settlements: any[] = []): Buffer {
+  const summaryHeaders = [
+    'Driver',
+    'Phone',
+    'Completed Deliveries',
+    'Current Commission Balance (ETB)',
+    'Previously Paid Commission (ETB)',
+    'Commission Rate'
+  ];
+  const deliveryHeaders = [
+    'Order #',
+    'Date',
+    'Driver',
+    'Driver Phone',
+    'Delivery Fee (ETB)',
+    'Commission Rate',
+    'Commission Earned (ETB)'
+  ];
+  const settlementHeaders = [
+    'Settlement Date',
+    'Commission Month',
+    'Driver',
+    'Driver Phone',
+    'Commission Paid (ETB)',
+    'Status'
+  ];
+
+  const summaryData = drivers.map((driver) => ({
+    'Driver': driver.name,
+    'Phone': driver.phone,
+    'Completed Deliveries': deliveredOrders.filter((order) => {
+      const driverId = typeof order.driver === 'object' && order.driver !== null ? order.driver._id : order.driver;
+      return driverId === driver._id;
+    }).length,
+    'Current Commission Balance (ETB)': Number(driver.commissionBalance || 0),
+    'Previously Paid Commission (ETB)': settlements
+      .filter((settlement) => settlement.driver === driver._id)
+      .reduce((total, settlement) => total + Number(settlement.amount || 0), 0),
+    'Commission Rate': '10%'
+  }));
+
+  const deliveryData = deliveredOrders.map((order) => {
+    const driver = order.driver && typeof order.driver === 'object' ? order.driver : null;
+    const fee = Number(order.fee || 0);
+    return {
+      'Order #': order.orderNumber || 0,
+      'Date': order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '',
+      'Driver': driver ? driver.name : 'Unknown',
+      'Driver Phone': driver ? driver.phone : 'N/A',
+      'Delivery Fee (ETB)': fee,
+      'Commission Rate': '10%',
+      'Commission Earned (ETB)': fee * 0.10
+    };
+  });
+
+  const settlementData = settlements.map((settlement) => ({
+    'Settlement Date': settlement.settledAt ? new Date(settlement.settledAt).toLocaleString() : '',
+    'Commission Month': settlement.settledAt ? new Date(settlement.settledAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : '',
+    'Driver': settlement.driverName,
+    'Driver Phone': settlement.driverPhone,
+    'Commission Paid (ETB)': Number(settlement.amount || 0),
+    'Status': 'PAID'
+  }));
+
+  const wb = XLSX.utils.book_new();
+  const summaryWs = XLSX.utils.json_to_sheet(summaryData, { header: summaryHeaders });
+  const deliveryWs = XLSX.utils.json_to_sheet(deliveryData, { header: deliveryHeaders });
+  const settlementWs = XLSX.utils.json_to_sheet(settlementData, { header: settlementHeaders });
+
+  summaryWs['!cols'] = [
+    { wch: 24 },
+    { wch: 18 },
+    { wch: 22 },
+    { wch: 30 },
+    { wch: 32 },
+    { wch: 18 }
+  ];
+  deliveryWs['!cols'] = [
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 24 },
+    { wch: 18 },
+    { wch: 22 },
+    { wch: 18 },
+    { wch: 25 }
+  ];
+  settlementWs['!cols'] = [
+    { wch: 22 },
+    { wch: 20 },
+    { wch: 24 },
+    { wch: 18 },
+    { wch: 24 },
+    { wch: 12 }
+  ];
+
+  XLSX.utils.book_append_sheet(wb, summaryWs, 'Commission Summary');
+  XLSX.utils.book_append_sheet(wb, deliveryWs, 'Completed Deliveries');
+  XLSX.utils.book_append_sheet(wb, settlementWs, 'Commission Paid History');
+  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+}

@@ -5,14 +5,16 @@ import { Collection, Db, MongoClient } from 'mongodb';
 
 dotenv.config();
 
+const moduleDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+
 // Simple helper to generate unique IDs
 export function generateId(): string {
   return Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
 }
 
 const DATA_DIR = [
-  path.resolve(__dirname, 'data'),
-  path.resolve(__dirname, '..', 'backend', 'data')
+  path.resolve(moduleDir, 'data'),
+  path.resolve(moduleDir, '..', 'backend', 'data')
 ].find((directory) => fs.existsSync(directory)) || path.resolve(process.cwd(), 'backend', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -56,11 +58,13 @@ interface DbData {
   customers: any[];
   drivers: any[];
   orders: any[];
+  commissionSettlements: any[];
   smsConfig?: any;
 }
 
 const defaultData: DbData = {
   users: [],
+  commissionSettlements: [],
   smsConfig: {
     localAddress: 'https://api.sms-gate.app:443',
     publicAddress: 'https://api.sms-gate.app',
@@ -409,7 +413,8 @@ export const model = (name: string, schema?: any) => {
     Customer: 'customers',
     Driver: 'drivers',
     Order: 'orders',
-    User: 'users'
+    User: 'users',
+    CommissionSettlement: 'commissionSettlements'
   };
   return new Model(collectionMap[name] || (name.toLowerCase() + 's' as keyof DbData));
 };
