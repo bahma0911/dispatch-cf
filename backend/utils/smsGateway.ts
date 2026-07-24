@@ -203,10 +203,10 @@ export async function sendSMS(
  * Build customized SMS text for Customers
  */
 export function buildCustomerSMS(customerName: string, orderNumber: number, driverName: string, driverPhone: string, paymentType: string, fee: number): string {
-  const paymentInstruction = paymentType === 'CREDIT' 
-    ? 'Charged to your Account Credit.' 
+  const paymentInstruction = paymentType === 'CREDIT'
+    ? `Charged to your Account Credit. Service amount: Br ${fee.toFixed(2)}. No payment is needed at delivery.`
     : `Please pay Cash on Delivery to the driver: Br ${fee.toFixed(2)}.`;
-    
+
   return `Hi ${customerName}, your delivery (Order #${orderNumber}) has been dispatched. Driver: ${driverName} (${driverPhone}). ${paymentInstruction} Thank you!`;
 }
 
@@ -215,7 +215,7 @@ export function buildCustomerSMS(customerName: string, orderNumber: number, driv
  */
 export function buildDriverSMS(driverName: string, orderNumber: number, customerName: string, customerPhone: string, pickup: string, delivery: string, paymentType: string, fee: number): string {
   const collectionInstruction = paymentType === 'CREDIT'
-    ? 'ACCOUNT CREDIT - DO NOT COLLECT CASH.'
+    ? `ACCOUNT CREDIT - DO NOT COLLECT CASH. Service amount: Br ${fee.toFixed(2)}.`
     : `COLLECT CASH ON DELIVERY: Br ${fee.toFixed(2)}.`;
 
   return `Hi ${driverName}, new Order #${orderNumber} assigned to you. Pickup: ${pickup} | Delivery: ${delivery} | Customer: ${customerName} (${customerPhone}). Instruction: ${collectionInstruction}`;
