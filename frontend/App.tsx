@@ -64,6 +64,10 @@ export default function App() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
+  // Search states for account holder lists
+  const [accountHolderSearch, setAccountHolderSearch] = useState<string>('');
+  const [dispatchAccountHolderSearch, setDispatchAccountHolderSearch] = useState<string>('');
+
   // Form States - Create Customer
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
@@ -600,6 +604,25 @@ export default function App() {
       showToast(err.message || 'Statement export failed.', 'error');
     }
   };
+
+  const normalizedAccountHolderSearch = accountHolderSearch.trim().toLowerCase();
+  const normalizedDispatchAccountHolderSearch = dispatchAccountHolderSearch.trim().toLowerCase();
+
+  const filteredAccountHolderCustomers = customers
+    .filter((customer) => customer.type === 'ACCOUNT_HOLDER')
+    .filter((customer) => {
+      if (!normalizedAccountHolderSearch) return true;
+      return `${customer.name} ${customer.phone} ${customer.address || ''}`.toLowerCase().includes(normalizedAccountHolderSearch);
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+  const filteredDispatchAccountHolders = customers
+    .filter((customer) => customer.type === 'ACCOUNT_HOLDER')
+    .filter((customer) => {
+      if (!normalizedDispatchAccountHolderSearch) return true;
+      return `${customer.name} ${customer.phone}`.toLowerCase().includes(normalizedDispatchAccountHolderSearch);
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
   // Order Filters application
   const filteredOrders = orders.filter((order) => {
@@ -1276,6 +1299,16 @@ export default function App() {
                           <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
                             Select Customer Account
                           </label>
+                          <div className="relative mb-2">
+                            <Search className="h-4 w-4 text-slate-400 absolute left-3 top-2.5" />
+                            <input
+                              type="text"
+                              value={dispatchAccountHolderSearch}
+                              onChange={(e) => setDispatchAccountHolderSearch(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium placeholder-slate-400"
+                              placeholder="Search by name or phone number"
+                            />
+                          </div>
                           <select
                             required={customerMode === 'REGISTERED'}
                             value={dispCustomerId}
@@ -1283,14 +1316,15 @@ export default function App() {
                             className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-semibold"
                           >
                             <option value="">-- Choose corporate account profile --</option>
-                            {customers
-                              .filter((c) => c.type === 'ACCOUNT_HOLDER')
-                              .map((c) => (
-                                <option key={c._id} value={c._id}>
-                                  {c.name} ({c.phone}) - Balance: Br {c.creditBalance.toFixed(2)}
-                                </option>
-                              ))}
+                            {filteredDispatchAccountHolders.map((c) => (
+                              <option key={c._id} value={c._id}>
+                                {c.name} ({c.phone}) - Balance: Br {c.creditBalance.toFixed(2)}
+                              </option>
+                            ))}
                           </select>
+                          {filteredDispatchAccountHolders.length === 0 && (
+                            <p className="text-[10px] text-slate-400 font-medium mt-1">No matching account holder found for the current search.</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1543,6 +1577,18 @@ export default function App() {
 
                 {/* Customer Table */}
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                  <div className="px-4 pt-4">
+                    <div className="relative max-w-md">
+                      <Search className="h-4 w-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        value={accountHolderSearch}
+                        onChange={(e) => setAccountHolderSearch(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium placeholder-slate-400"
+                        placeholder="Search account holder by name or phone"
+                      />
+                    </div>
+                  </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
                       <thead className="bg-slate-50 border-b border-slate-200">
@@ -1556,63 +1602,68 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {customers
-                          .filter((c) => c.type === 'ACCOUNT_HOLDER')
-                          .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-                          .map((c) => (
-                          <tr key={c._id} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-bold text-slate-800">{c.name}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="font-mono text-xs text-slate-600 bg-slate-50 border border-slate-150 px-2 py-0.5 rounded-md">
-                                {c.phone}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <p className="text-xs text-slate-600 max-w-sm truncate font-medium" title={c.address}>
-                                {c.address || 'No Address registered'}
-                              </p>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tight ${
-                                c.type === 'ACCOUNT_HOLDER' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-50 text-slate-500 border border-slate-100'
-                              }`}>
-                                {c.type}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {c.type === 'ACCOUNT_HOLDER' ? (
-                                <div className="text-sm font-black text-slate-800">
-                                  Br {c.creditBalance.toFixed(2)}
-                                </div>
-                              ) : (
-                                <div className="text-xs text-slate-400 font-mono">N/A (Cash customer)</div>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-xs font-medium space-x-1.5">
-                              {c.type === 'ACCOUNT_HOLDER' && (
-                                <>
-                                  {c.creditBalance > 0 && (
-                                    <button
-                                      onClick={() => handleSettleBalance(c._id)}
-                                      className="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm"
-                                    >
-                                      Settle Balance
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => downloadAccountStatementExcel(c._id, c.name)}
-                                    className="inline-flex items-center bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold px-3 py-1.5 rounded-lg text-xs transition"
-                                  >
-                                    <FileSpreadsheet className="h-3.5 w-3.5 mr-1 text-indigo-600" />
-                                    Download Invoice (.xlsx)
-                                  </button>
-                                </>
-                              )}
+                        {filteredAccountHolderCustomers.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-8 text-center text-xs text-slate-500 font-medium">
+                              No account holders match the current search.
                             </td>
                           </tr>
-                          ))}
+                        ) : (
+                          filteredAccountHolderCustomers.map((c) => (
+                            <tr key={c._id} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-bold text-slate-800">{c.name}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="font-mono text-xs text-slate-600 bg-slate-50 border border-slate-150 px-2 py-0.5 rounded-md">
+                                  {c.phone}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <p className="text-xs text-slate-600 max-w-sm truncate font-medium" title={c.address}>
+                                  {c.address || 'No Address registered'}
+                                </p>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tight ${
+                                  c.type === 'ACCOUNT_HOLDER' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-50 text-slate-500 border border-slate-100'
+                                }`}>
+                                  {c.type}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {c.type === 'ACCOUNT_HOLDER' ? (
+                                  <div className="text-sm font-black text-slate-800">
+                                    Br {c.creditBalance.toFixed(2)}
+                                  </div>
+                                ) : (
+                                  <div className="text-xs text-slate-400 font-mono">N/A (Cash customer)</div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-xs font-medium space-x-1.5">
+                                {c.type === 'ACCOUNT_HOLDER' && (
+                                  <>
+                                    {c.creditBalance > 0 && (
+                                      <button
+                                        onClick={() => handleSettleBalance(c._id)}
+                                        className="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm"
+                                      >
+                                        Settle Balance
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => downloadAccountStatementExcel(c._id, c.name)}
+                                      className="inline-flex items-center bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold px-3 py-1.5 rounded-lg text-xs transition"
+                                    >
+                                      <FileSpreadsheet className="h-3.5 w-3.5 mr-1 text-indigo-600" />
+                                      Download Invoice (.xlsx)
+                                    </button>
+                                  </>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
