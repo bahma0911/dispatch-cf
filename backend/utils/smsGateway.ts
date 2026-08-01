@@ -203,20 +203,20 @@ export async function sendSMS(
  * Build customized SMS text for Customers
  */
 export function buildCustomerSMS(customerName: string, orderNumber: number, driverName: string, driverPhone: string, paymentType: string, fee: number): string {
-  const paymentInstruction = paymentType === 'CREDIT'
-    ? `Charged to your Account Credit. Service amount: Br ${fee.toFixed(2)}. No payment is needed at delivery.`
-    : `Please pay Cash on Delivery to the driver: Br ${fee.toFixed(2)}.`;
+  if (paymentType === 'CREDIT') {
+    return `ሰላም ${customerName}፣ ያዘዙት ዕቃ (ትዕዛዝ ቁጥር #${orderNumber}) ተልኳል። አሽከርካሪ፡ ${driverName} (${driverPhone})። በሂሳብዎ (አካውንት ክሬዲት) ተይዟል። የአገልግሎት ዋጋ፡ ${fee.toFixed(2)} ብር። ዕቃው ሲደርስ ምንም ዓይነት ክፍያ መክፈል አያስፈልግዎትም። እናመሰግናለን!`;
+  }
 
-  return `Hi ${customerName}, your delivery (Order #${orderNumber}) has been dispatched. Driver: ${driverName} (${driverPhone}). ${paymentInstruction} Thank you!`;
+  return `ሰላም ${customerName}፣ ያዘዙት ዕቃ (ትዕዛዝ ቁጥር #${orderNumber}) ተልኳል። አሽከርካሪ፡ ${driverName} (${driverPhone})። እባክዎ ዕቃው ሲደርስዎ ለአሽከርካሪው በካሽ ${fee.toFixed(2)} ብር ይክፈሉ። እናመሰግናለን!`;
 }
 
 /**
  * Build customized SMS text for Drivers
  */
 export function buildDriverSMS(driverName: string, orderNumber: number, customerName: string, customerPhone: string, pickup: string, delivery: string, paymentType: string, fee: number): string {
-  const collectionInstruction = paymentType === 'CREDIT'
-    ? `ACCOUNT CREDIT - DO NOT COLLECT CASH. Service amount: Br ${fee.toFixed(2)}.`
-    : `COLLECT CASH ON DELIVERY: Br ${fee.toFixed(2)}.`;
+  if (paymentType === 'CREDIT') {
+    return `ሰላም ${driverName}፣ አዲስ ትዕዛዝ ቁጥር #${orderNumber} ለእርስዎ ተመድቧል። መነሻ (ፒክአፕ)፡ ${pickup} | ማድረሻ (ዴሊቨሪ)፡ ${delivery} | ደንበኛ፡ ${customerName} (${customerPhone})። መመሪያ፡ ዕቃው ሲደርስ ${fee.toFixed(2)} ብር በአካውንት ክሬዲት ይሰብስቡ።`;
+  }
 
-  return `Hi ${driverName}, new Order #${orderNumber} assigned to you. Pickup: ${pickup} | Delivery: ${delivery} | Customer: ${customerName} (${customerPhone}). Instruction: ${collectionInstruction}`;
+  return `ሰላም ${driverName}፣ አዲስ ትዕዛዝ ቁጥር #${orderNumber} ለእርስዎ ተመድቧል። መነሻ (ፒክአፕ)፡ ${pickup} | ማድረሻ (ዴሊቨሪ)፡ ${delivery} | ደንበኛ፡ ${customerName} (${customerPhone})። መመሪያ፡ ዕቃው ሲደርስ ${fee.toFixed(2)} ብር በካሽ ይሰብስቡ።`;
 }
