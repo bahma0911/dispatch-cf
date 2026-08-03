@@ -200,6 +200,20 @@ export async function sendSMS(
 }
 
 /**
+ * Build customized SMS text for cancelled orders to Customers
+ */
+export function buildCancellationCustomerSMS(customerName: string, orderNumber: number): string {
+  return `ሰላም ${customerName}፣ ያዘዙት ዕቃ (ትዕዛዝ ቁጥር #${orderNumber}) ተሰርዟል እናመሰግናለን!`;
+}
+
+/**
+ * Build customized SMS text for cancelled orders to Drivers
+ */
+export function buildCancellationDriverSMS(driverName: string, orderNumber: number, customerName: string, customerPhone: string): string {
+  return `ሰላም ${driverName}፣ ትዕዛዝ ቁጥር #${orderNumber} ተሰርዟል። ደንበኛ፡ ${customerName} (${customerPhone})። እባክዎ ይህን ትዕዛዝ አስተውሉ።`;
+}
+
+/**
  * Build customized SMS text for Customers
  */
 export function buildCustomerSMS(customerName: string, orderNumber: number, driverName: string, driverPhone: string, paymentType: string, fee: number): string {

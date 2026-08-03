@@ -6,7 +6,9 @@ import { authenticateToken } from '../middleware/auth';
 import {
   sendSMS,
   buildCustomerSMS,
-  buildDriverSMS
+  buildDriverSMS,
+  buildCancellationCustomerSMS,
+  buildCancellationDriverSMS
 } from '../utils/smsGateway';
 import {
   generateDailyDispatchExcel,
@@ -208,6 +210,33 @@ router.put('/:id/status', authenticateToken, async (req: Request, res: Response)
     }
 
     const populated = (await Order.populate([updated], ['customer', 'driver']))[0];
+
+    if (newStatus === 'CANCELLED' && oldStatus !== 'CANCELLED') {
+      const customerData = typeof populated.customer === 'object' && populated.customer !== null ? populated.customer : null;
+      const driverData = typeof populated.driver === 'object' && populated.driver !== null ? populated.driver : null;
+
+      const smsTasks: Promise<any>[] = [];
+
+      if (customerData?.phone) {
+        const customerMsg = buildCancellationCustomerSMS(customerData.name || 'ደንበኛ', populated.orderNumber || 0);
+        smsTasks.push(sendSMS(customerData.name || 'ደንበኛ', customerData.phone, 'CUSTOMER', customerMsg));
+      }
+
+      if (driverData?.phone) {
+        const driverMsg = buildCancellationDriverSMS(
+          driverData.name || 'አሽከርካሪ',
+          populated.orderNumber || 0,
+          customerData?.name || 'ደንበኛ',
+          customerData?.phone || ''
+        );
+        smsTasks.push(sendSMS(driverData.name || 'አሽከርካሪ', driverData.phone, 'DRIVER', driverMsg));
+      }
+
+      if (smsTasks.length > 0) {
+        Promise.all(smsTasks).catch((err) => console.error('Error dispatching cancellation SMS notifications', err));
+      }
+    }
+
     res.json(populated);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
