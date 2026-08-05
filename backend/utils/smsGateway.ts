@@ -203,14 +203,14 @@ export async function sendSMS(
  * Build customized SMS text for cancelled orders to Customers
  */
 export function buildCancellationCustomerSMS(customerName: string, orderNumber: number): string {
-  return `ሰላም ${customerName}፣ ያዘዙት ዕቃ (ትዕዛዝ ቁጥር #${orderNumber}) ተሰርዟል እናመሰግናለን!`;
+  return `ሰላም ${customerName}፣ ያዘዙት ዕቃ (ትዕዛዝ ቁጥር #${orderNumber}) ተሰርዟል ለበለጠ መረጃ በስልክ ቁጥር 0911826617 ይደውሉ እናመሰግናለን!`;
 }
 
 /**
  * Build customized SMS text for cancelled orders to Drivers
  */
 export function buildCancellationDriverSMS(driverName: string, orderNumber: number, customerName: string, customerPhone: string): string {
-  return `ሰላም ${driverName}፣ ትዕዛዝ ቁጥር #${orderNumber} ተሰርዟል። ደንበኛ፡ ${customerName} (${customerPhone})። እባክዎ ይህን ትዕዛዝ አስተውሉ።`;
+  return `ሰላም ${driverName}፣ ትዕዛዝ ቁጥር #${orderNumber} ተሰርዟል። ደንበኛ፡ ${customerName} (${customerPhone})። እባክዎ ይህን ትዕዛዝ አስተውሉ ለበለጠ መረጃ በስልክ ቁጥር 0911826617 ይደውሉ።`;
 }
 
 /**
