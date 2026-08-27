@@ -11,6 +11,12 @@ const router = Router();
  */
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
+    const authReq = req as AuthenticatedRequest;
+    if (authReq.user?.username !== 'admin' && authReq.user?.role !== 'ADMIN') {
+      res.status(403).json({ error: 'Permission Denied: Only admin users may list customers.' });
+      return;
+    }
+
     const list = await Customer.find();
     res.json(list);
   } catch (error: any) {
@@ -24,6 +30,12 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
  */
 router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
+    const authReq = req as AuthenticatedRequest;
+    if (authReq.user?.username !== 'admin' && authReq.user?.role !== 'ADMIN') {
+      res.status(403).json({ error: 'Permission Denied: Only admin users may view customer profiles.' });
+      return;
+    }
+
     const customer = await Customer.findById(req.params.id);
     if (!customer) {
       res.status(404).json({ error: 'Customer not found' });

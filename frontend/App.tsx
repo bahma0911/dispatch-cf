@@ -39,6 +39,35 @@ interface Toast {
 }
 
 export default function App() {
+  // Reusable progress bar showing paid percentage and amounts
+  const ProgressBar: React.FC<{ current: number; total: number; showPercent?: boolean }> = ({ current, total, showPercent = true }) => {
+    const safeTotal = Number(total || 0);
+    const safeCurrent = Math.max(0, Math.min(Number(current || 0), safeTotal));
+    const percent = safeTotal > 0 ? Math.round((safeCurrent / safeTotal) * 100) : 100;
+    const remaining = Math.max(0, safeTotal - safeCurrent);
+
+    return (
+      <div>
+        {showPercent ? (
+          <div className="flex justify-between items-baseline mb-2">
+            <div className="text-[10px] text-slate-500">Remaining: Br {remaining.toFixed(2)}</div>
+          </div>
+        ) : (
+          <div className="flex justify-between items-baseline mb-2">
+            <div className="text-xs font-medium text-rose-600">Br {safeCurrent.toFixed(2)}</div>
+            <div className="text-[10px] text-slate-500">Br {remaining.toFixed(2)}</div>
+          </div>
+        )}
+
+        <div className="w-full bg-gradient-to-r from-slate-100 to-slate-100 rounded-full h-4 overflow-hidden shadow-inner">
+          <div
+            className="h-4 rounded-full bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 transition-all"
+            style={{ width: `${percent}%`, transition: 'width 900ms cubic-bezier(.2,.9,.2,1)' }}
+          />
+        </div>
+      </div>
+    );
+  };
   // Auth state
   const [token, setToken] = useState<string | null>(localStorage.getItem('dispatcher_token'));
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -77,6 +106,9 @@ export default function App() {
   // Form States - Create Driver
   const [newDriverName, setNewDriverName] = useState('');
   const [newDriverPhone, setNewDriverPhone] = useState('');
+  const [newDriverType, setNewDriverType] = useState<'REGULAR' | 'TEMPORARY'>('REGULAR');
+  const [newDriverOwedAmount, setNewDriverOwedAmount] = useState<number>(0);
+  const [newDriverDeposit, setNewDriverDeposit] = useState<number>(0);
   const [isCreatingDriver, setIsCreatingDriver] = useState(false);
 
   // Form States - Dispatch Order
@@ -93,12 +125,45 @@ export default function App() {
 
   // Toast Notifications
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [confettiVisible, setConfettiVisible] = useState(false);
+
+  // Fetch driver details (admin) and show modal
+  const handleOpenDriverDetails = async (driverId: string) => {
+    if (!token) return;
+    setIsLoadingDriverDetails(true);
+    try {
+      const res = await fetch(`/api/drivers/${driverId}`, { headers: getAuthHeaders() });
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (parseErr) {
+        data = { raw: text };
+      }
+
+      if (res.ok) {
+        setSelectedDriverDetails({ driver: data.driver, user: data.user || undefined });
+      } else {
+        console.error('Driver details fetch failed', res.status, data);
+        showToast(data.error || data.raw || `Failed to fetch driver details (status ${res.status})`, 'error');
+      }
+    } catch (err) {
+      console.error('Error fetching driver details', err);
+      showToast((err as any)?.message || 'Error fetching driver details', 'error');
+    } finally {
+      setIsLoadingDriverDetails(false);
+    }
+  };
+
+  const handleCloseDriverDetails = () => setSelectedDriverDetails(null);
 
   // Custom Settle Balance Modal States
   const [customerToSettle, setCustomerToSettle] = useState<Customer | null>(null);
   const [isSettlingInProgress, setIsSettlingInProgress] = useState(false);
   const [driverToSettle, setDriverToSettle] = useState<Driver | null>(null);
   const [isDriverSettlingInProgress, setIsDriverSettlingInProgress] = useState(false);
+  const [selectedDriverDetails, setSelectedDriverDetails] = useState<null | { driver: Driver; user?: { username: string; initialPassword?: string } }>(null);
+  const [isLoadingDriverDetails, setIsLoadingDriverDetails] = useState(false);
 
   // SMS Gateway Config States
   const [smsConfig, setSmsConfig] = useState({
@@ -125,6 +190,33 @@ export default function App() {
     }, 4000);
   };
 
+  // Confetti overlay (simple emoji confetti)
+  const ConfettiOverlay: React.FC = () => {
+    const pieces = Array.from({ length: 18 });
+    return (
+      <div className="fixed inset-0 pointer-events-none z-50 flex items-start justify-center">
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="relative mt-24 w-full flex items-start justify-center">
+          {pieces.map((_, i) => (
+            <span
+              key={i}
+              className="absolute text-2xl animate-confetti"
+              style={{ left: `${5 + (i * 90) / pieces.length}%`, transform: `rotate(${(i % 5) * 30}deg)` }}
+            >
+              🎉
+            </span>
+          ))}
+          <div className="absolute top-24">
+            <div className="bg-white/90 px-6 py-4 rounded-xl shadow-lg text-center">
+              <div className="text-2xl font-extrabold text-rose-600">Goal Reached!</div>
+              <div className="text-sm text-slate-600">Driver has fully repaid their owed amount.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Helper: Get headers with JWT
   const getAuthHeaders = () => {
     return {
@@ -133,13 +225,79 @@ export default function App() {
     };
   };
 
+  // Driver-specific profile for logged-in driver
+  const [myDriver, setMyDriver] = useState<Driver | null>(null);
+
+  // Track previous percents to detect threshold crossings
+  const prevPercents = React.useRef<Record<string, number>>({});
+
   // 1. Check Authenticated User on mount/token change
   useEffect(() => {
     if (token) {
-      fetchCurrentUser();
-      fetchDashboardData();
+      (async () => {
+        const user = await fetchCurrentUser();
+        await fetchDashboardData(user ?? undefined);
+      })();
     }
   }, [token]);
+
+  // If logged-in user is a driver, poll for updates to their profile/orders so UI stays fresh
+  useEffect(() => {
+    if (currentUser?.role === 'DRIVER') {
+      const interval = setInterval(() => {
+        fetchDashboardData(currentUser);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+    return;
+  }, [currentUser]);
+
+  // Detect progress threshold crossings for admin notifications and driver celebration
+  useEffect(() => {
+    try {
+      // check fleet drivers (admin view)
+      drivers.forEach((d) => {
+        const id = d._id;
+        const owed = Number(d.owedAmount || 0);
+        if (!owed || owed <= 0) return;
+        const collected = Math.min(Number(d.owedBalance || 0), owed);
+        const percent = Math.round((collected / owed) * 100);
+        const prev = prevPercents.current[id] ?? 0;
+
+        // admin notifications
+        if (currentUser?.username === 'admin') {
+          if (prev < 90 && percent >= 90 && percent < 100) {
+            showToast(`${d.name} reached ${percent}% of their owed amount`, 'info');
+          }
+          if (prev < 100 && percent >= 100) {
+            showToast(`${d.name} has fully repaid their owed amount!`, 'success');
+          }
+        }
+
+        prevPercents.current[id] = percent;
+      });
+
+      // check logged-in driver for celebration
+      if (myDriver) {
+        const id = myDriver._id;
+        const owed = Number(myDriver.owedAmount || 0);
+        if (owed && owed > 0) {
+          const collected = Math.min(Number(myDriver.owedBalance || 0), owed);
+          const percent = Math.round((collected / owed) * 100);
+          const prev = prevPercents.current[id] ?? 0;
+          if (prev < 100 && percent >= 100) {
+            // show confetti celebration for driver
+            setConfettiVisible(true);
+            setTimeout(() => setConfettiVisible(false), 6000);
+            showToast('Congratulations — you have repaid the owed amount!', 'success');
+          }
+          prevPercents.current[id] = percent;
+        }
+      }
+    } catch (err) {
+      console.error('Progress detection error', err);
+    }
+  }, [drivers, myDriver, currentUser]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -149,19 +307,39 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setCurrentUser(data.user);
+        return data.user;
       } else {
         // Stale or invalid token
         handleLogout();
+        return null;
       }
     } catch (err) {
       console.error('Error fetching current user:', err);
     }
   };
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (userParam?: any) => {
     if (!token) return;
     try {
       const headers = getAuthHeaders();
+      const role = userParam?.role ?? currentUser?.role;
+
+      if (role === 'DRIVER') {
+        // For driver accounts, only fetch orders assigned to them and their driver profile
+        const [ordersRes, driverRes] = await Promise.all([
+          fetch('/api/orders', { headers }),
+          fetch('/api/drivers/me', { headers })
+        ]);
+
+        if (ordersRes.ok) setOrders(await ordersRes.json());
+        if (driverRes.ok) {
+          const data = await driverRes.json();
+          setMyDriver(data.driver || null);
+        }
+        return;
+      }
+
+      // Default admin/dispatcher fetches
       const [ordersRes, custRes, drvRes, smsRes] = await Promise.all([
         fetch('/api/orders', { headers }),
         fetch('/api/customers', { headers }),
@@ -288,16 +466,26 @@ export default function App() {
         body: JSON.stringify({
           name: newDriverName,
           phone: newDriverPhone,
-          status: 'AVAILABLE'
+          status: 'AVAILABLE',
+          type: newDriverType,
+          owedAmount: newDriverType === 'TEMPORARY' ? Number(newDriverOwedAmount || 0) : undefined,
+          deposit: newDriverType === 'TEMPORARY' ? Number(newDriverDeposit || 0) : undefined
         })
       });
 
       const data = await res.json();
       if (res.ok) {
-        showToast(`Driver "${data.name}" added to roster.`, 'success');
-        setDrivers((prev) => [data, ...prev]);
+        const created = data.driver || data;
+        showToast(`Driver "${created.name}" added to roster.`, 'success');
+        setDrivers((prev) => [created, ...prev]);
+        if (data.credentials) {
+          showToast(`Credentials: ${data.credentials.username} / ${data.credentials.password}`, 'info');
+        }
         setNewDriverName('');
         setNewDriverPhone('');
+        setNewDriverType('REGULAR');
+        setNewDriverOwedAmount(0);
+        setNewDriverDeposit(0);
         setIsCreatingDriver(false);
       } else {
         showToast(data.error || 'Failed to add driver.', 'error');
@@ -775,8 +963,101 @@ export default function App() {
     );
   }
 
+  // If logged-in user is a driver, render a simplified driver dashboard
+  if (currentUser?.role === 'DRIVER') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col font-sans select-none">
+        <header className="bg-white border-b border-slate-200 text-slate-800 sticky top-0 z-30 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="h-10 w-10 rounded-lg bg-white flex items-center justify-center shadow-sm overflow-hidden">
+                <img src="/nega-logo.png" alt="Negadras Express" className="h-10 w-10 object-cover" />
+              </div>
+              <div>
+                <h1 className="text-base font-black tracking-tight text-slate-900">Driver Dashboard</h1>
+                <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">My Deliveries & Commissions</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="hidden sm:inline-flex items-center bg-slate-50 border border-slate-200 px-3 py-1 rounded-full text-xs text-slate-600 font-mono font-medium">
+                Driver: {currentUser?.name}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white p-4 rounded-lg border border-slate-200">
+              <div className="text-xs text-slate-500 font-bold">Commission Balance</div>
+              <div className="text-2xl font-extrabold text-indigo-600">Br {Number(myDriver?.commissionBalance || 0).toFixed(2)}</div>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-slate-200">
+              <div className="text-xs text-slate-500 font-bold">Owed Balance</div>
+              <div className="text-2xl font-extrabold text-rose-600">Br {Number(myDriver?.owedBalance || 0).toFixed(2)}</div>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-slate-200">
+              <div className="text-xs text-slate-500 font-bold">Owed Amount (Initial)</div>
+              <div className="text-2xl font-extrabold text-slate-800">Br {Number(myDriver?.owedAmount || 0).toFixed(2)}</div>
+            </div>
+          </div>
+
+          {myDriver?.owedAmount && Number(myDriver.owedAmount) > 0 && (
+            <div className="mb-6 bg-white p-4 rounded-lg border border-slate-200">
+              <div className="text-xs text-slate-500 font-bold mb-2">Owed Repayment Progress</div>
+              <ProgressBar
+                current={Number(myDriver.owedBalance || 0)}
+                total={Number(myDriver.owedAmount || 0)}
+              />
+              <div className="text-xs text-slate-400 mt-2">Collected: Br {Number(myDriver.owedBalance || 0).toFixed(2)} of Br {Number(myDriver.owedAmount || 0).toFixed(2)}</div>
+            </div>
+          )}
+
+          <section className="bg-white p-4 rounded-lg border border-slate-200">
+            <h2 className="text-sm font-extrabold text-slate-800 mb-3">My Delivery History</h2>
+            {orders.length === 0 ? (
+              <div className="text-sm text-slate-500">No deliveries found.</div>
+            ) : (
+              <ul className="space-y-2">
+                {orders.map((o) => (
+                  <li key={o._id} className="p-3 border border-slate-100 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-xs text-slate-500">Order #{o.orderNumber}</div>
+                        <div className="font-bold text-sm">{(typeof o.customer === 'object' && o.customer?.name) || 'Walk-in'}</div>
+                        <div className="text-xs text-slate-400">{o.pickupAddress} → {o.deliveryAddress}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-extrabold">Br {Number(o.fee || 0).toFixed(2)}</div>
+                        <div className="text-xs text-slate-500">Status: {o.orderStatus}</div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans select-none">
+      <style>{`
+        @keyframes confetti-fall { 0% { transform: translateY(-10px) rotate(0deg); opacity: 1 } 100% { transform: translateY(380px) rotate(360deg); opacity: 0 } }
+        .animate-confetti { animation: confetti-fall 3500ms linear forwards; }
+      `}</style>
+
+      {confettiVisible && <ConfettiOverlay />}
+
       {/* Toast Notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm pointer-events-none">
         <AnimatePresence>
@@ -1587,22 +1868,61 @@ export default function App() {
                             placeholder="e.g. 555-2233"
                           />
                         </div>
-                        <button
-                          type="submit"
-                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition-colors"
-                        >
-                          Register Driver
-                        </button>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Driver Type</label>
+                          <select
+                            value={newDriverType}
+                            onChange={(e) => setNewDriverType(e.target.value as any)}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                          >
+                            <option value="REGULAR">Regular</option>
+                            <option value="TEMPORARY">Temporary (owns vehicle)</option>
+                          </select>
+                        </div>
+
+                        {newDriverType === 'TEMPORARY' && (
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Owed Amount (initial loan)</label>
+                            <input
+                              type="number"
+                              value={newDriverOwedAmount}
+                              onChange={(e) => setNewDriverOwedAmount(Number(e.target.value))}
+                              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                              placeholder="0.00"
+                              min={0}
+                            />
+                          </div>
+                        )}
+                        {newDriverType === 'TEMPORARY' && (
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Deposit / Down Payment</label>
+                            <input
+                              type="number"
+                              value={newDriverDeposit}
+                              onChange={(e) => setNewDriverDeposit(Number(e.target.value))}
+                              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                              placeholder="0.00"
+                              min={0}
+                            />
+                            <p className="text-[10px] text-slate-400 mt-1">Amount applied toward the owed balance (shows as paid: Br X of Br Y).</p>
+                          </div>
+                        )}
+                        <div>
+                          <button
+                            type="submit"
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition-colors"
+                          >
+                            Register Driver
+                          </button>
+                        </div>
                       </form>
                     </div>
                   )}
-
                 </div>
               </motion.div>
             )}
-
-            {activeTab === 'customers' && (
-              <motion.div
+                  {activeTab === 'customers' && (
+                  <motion.div
                 key="customers"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1770,7 +2090,7 @@ export default function App() {
                     .slice()
                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
                     .map((driver) => (
-                    <div key={driver._id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 hover:border-slate-300 transition-colors">
+                    <div key={driver._id} onClick={() => handleOpenDriverDetails(driver._id)} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 hover:border-slate-300 transition-colors cursor-pointer">
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="text-sm font-bold text-slate-800">{driver.name}</h3>
@@ -1794,14 +2114,22 @@ export default function App() {
                             <p className="text-lg font-black text-indigo-600">Br {Number(driver.commissionBalance || 0).toFixed(2)}</p>
                             <p className="text-[10px] text-slate-400 font-medium">10% of completed delivery fees</p>
                           </div>
-                          {Number(driver.commissionBalance || 0) > 0 && (
+                          <div className="text-right flex items-center space-x-2">
+                            {Number(driver.commissionBalance || 0) > 0 && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleSettleDriverCommission(driver._id); }}
+                                className="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm"
+                              >
+                                Settle
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleSettleDriverCommission(driver._id)}
-                              className="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm"
+                              onClick={(e) => { e.stopPropagation(); handleOpenDriverDetails(driver._id); }}
+                              className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-slate-50 border border-slate-200 hover:bg-slate-100"
                             >
-                              Settle Commission
+                              View
                             </button>
-                          )}
+                          </div>
                         </div>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">Set Dispatcher Status:</p>
                         <div className="grid grid-cols-3 gap-1">
@@ -2434,6 +2762,98 @@ export default function App() {
                       <span>Confirm Settlement</span>
                     )}
                   </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Driver Details Modal (admin) */}
+      <AnimatePresence>
+        {selectedDriverDetails?.driver && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden"
+            >
+              <div className="p-6 space-y-4 text-left">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg flex-shrink-0">
+                    <Truck className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-bold text-slate-900">Driver Details</h3>
+                    <p className="text-xs text-slate-500 font-medium mt-1">View driver type, owed balances and initial credentials (if available).</p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 font-medium">Name:</span>
+                    <span className="text-slate-800 font-bold">{selectedDriverDetails?.driver?.name ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 font-medium">Phone:</span>
+                    <span className="text-slate-800 font-mono font-medium">{selectedDriverDetails?.driver?.phone ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 font-medium">Type:</span>
+                    <span className="text-slate-800 font-bold">{selectedDriverDetails?.driver?.type || 'REGULAR'}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 font-medium">Commission Balance:</span>
+                    <span className="text-indigo-600 font-black">Br {Number(selectedDriverDetails?.driver?.commissionBalance || 0).toFixed(2)}</span>
+                  </div>
+                  {selectedDriverDetails?.driver?.type === 'TEMPORARY' && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500 font-medium">Owed / Initial:</span>
+                      <span className="text-rose-600 font-black">Br {Number(selectedDriverDetails?.driver?.owedBalance || 0).toFixed(2)} / Br {Number(selectedDriverDetails?.driver?.owedAmount || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {selectedDriverDetails?.driver?.type === 'TEMPORARY' && Number(selectedDriverDetails?.driver?.owedAmount || 0) > 0 && (
+                    <div className="mt-3">
+                      <div className="text-xs text-slate-500 font-bold mb-2">Owed Repayment Progress</div>
+                      <ProgressBar
+                        current={Number(selectedDriverDetails?.driver?.owedBalance || 0)}
+                        total={Number(selectedDriverDetails?.driver?.owedAmount || 0)}
+                      />
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-slate-100" />
+                  <div className="text-xs">
+                    <div className="text-[10px] text-slate-500 font-medium">Account Credentials</div>
+                    {selectedDriverDetails.user ? (
+                      <div className="mt-2 bg-white border border-slate-100 rounded-md p-2 text-xs font-mono">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-slate-600">Username</div>
+                            <div className="font-bold text-slate-800">{selectedDriverDetails.user.username}</div>
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <div className="text-slate-600">Password</div>
+                          {selectedDriverDetails.user.initialPassword ? (
+                            <div className="flex items-center justify-between">
+                              <div className="font-bold text-slate-800">{selectedDriverDetails.user.initialPassword}</div>
+                              <button onClick={() => { navigator.clipboard.writeText(selectedDriverDetails.user?.initialPassword || ''); showToast('Password copied', 'info'); }} className="text-xs px-2 py-1 bg-slate-50 border border-slate-200 rounded ml-2">Copy</button>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-400">Hidden — driver has updated their password</div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-xs text-slate-400">No linked account</div>
+                    )}
+                  </div>
+
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button onClick={handleCloseDriverDetails} className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50">Close</button>
                 </div>
               </div>
             </motion.div>

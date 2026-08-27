@@ -16,6 +16,16 @@
       "role": "DISPATCHER",
       "createdAt": "2026-07-22T11:21:33.393Z"
     }
+    ,
+    {
+      "_id": "usr-abebe-1",
+      "username": "abebe",
+      "passwordHash": "$2b$10$PCWGyQrwB4FKXF2lTP1Tn.TWAxBf8rtWXh/nmR5YS4C3BjK0LVYwS",
+      "initialPassword": "password123",
+      "name": "Abebe Test",
+      "role": "DRIVER",
+      "createdAt": "2026-08-16T00:00:00.000Z"
+    }
   ],
   "customers": [
     {
@@ -71,6 +81,18 @@
       "phone": "555-1003",
       "status": "BUSY"
     }
+    ,
+    {
+      "_id": "drv-abebe",
+      "name": "Abebe Test",
+      "phone": "0911",
+      "status": "AVAILABLE",
+      "type": "TEMPORARY",
+      "owedAmount": 500,
+      "owedBalance": 0,
+      "userId": "usr-abebe-1",
+      "createdAt": "2026-08-16T00:00:00.000Z"
+    }
   ],
   "orders": [
     {
@@ -111,6 +133,20 @@
       "orderStatus": "DELIVERED",
       "createdAt": "2026-07-22T11:33:24.748Z",
       "orderNumber": 1003
+    }
+    ,
+    {
+      "_id": "ord-1004",
+      "orderNumber": 1004,
+      "customer": "cust-1",
+      "driver": "drv-abebe",
+      "pickupAddress": "Bole",
+      "deliveryAddress": "Addis Home",
+      "fee": 200,
+      "paymentType": "CASH",
+      "paymentStatus": "PAID",
+      "orderStatus": "DELIVERED",
+      "createdAt": "2026-08-16T00:05:00.000Z"
     }
   ],
   "smsConfig": {

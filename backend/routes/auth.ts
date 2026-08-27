@@ -162,3 +162,44 @@ router.get('/me', authenticateToken, async (req: Request, res: Response) => {
 });
 
 export default router;
+
+/**
+ * @route POST /api/auth/change-password
+ * @desc Change current user's password (requires current password)
+ */
+router.post('/change-password', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!authReq.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: 'Current and new passwords are required' });
+      return;
+    }
+
+    const user = await User.findById(authReq.user.userId);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const match = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!match) {
+      res.status(401).json({ error: 'Current password is incorrect' });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    // Clear any initialPassword that was stored for admin visibility
+    const updated = await User.findByIdAndUpdate(user._id, { passwordHash, initialPassword: undefined });
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});

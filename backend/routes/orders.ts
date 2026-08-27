@@ -23,12 +23,24 @@ const router = Router();
  */
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
+    const authReq = req as any;
     const { status, paymentType, paymentStatus, startDate, endDate } = req.query;
     
     let query: any = {};
     if (status) query.orderStatus = status;
     if (paymentType) query.paymentType = paymentType;
     if (paymentStatus) query.paymentStatus = paymentStatus;
+
+    // If the requester is a driver, restrict results to their own orders only
+    if (authReq.user && authReq.user.role === 'DRIVER') {
+      // Find the driver's profile by linked user id
+      const driver = await Driver.findOne((d: any) => d.userId === authReq.user.userId);
+      if (!driver) {
+        res.status(404).json({ error: 'Driver profile not found for user.' });
+        return;
+      }
+      query.driver = driver._id;
+    }
 
     let orders = await Order.find(query);
 
@@ -200,12 +212,35 @@ router.put('/:id/status', authenticateToken, async (req: Request, res: Response)
     // Add the driver's 10% commission once when the delivery is completed.
     if (newStatus === 'DELIVERED' && oldStatus !== 'DELIVERED') {
       const driverId = typeof order.driver === 'object' && order.driver !== null ? order.driver._id : order.driver;
-      const driver = await Driver.findById(driverId);
+      const driver: any = await Driver.findById(driverId);
       if (driver) {
         const commission = Number(order.fee || 0) * 0.10;
-        const updatedCommissionBalance = Number(driver.commissionBalance || 0) + commission;
-        await Driver.findByIdAndUpdate(driver._id, { commissionBalance: updatedCommissionBalance });
-        console.log(`Added driver commission Br ${commission.toFixed(2)} to ${driver.name}. New balance: Br ${updatedCommissionBalance.toFixed(2)}`);
+        if (driver.type === 'TEMPORARY') {
+          // Split commission in half, but cap owedBalance at owedAmount.
+          const half = commission / 2;
+          const existingCommission = Number(driver.commissionBalance || 0);
+          const existingOwed = Number(driver.owedBalance || 0);
+          const owedAmount = Number(driver.owedAmount || 0);
+
+          const availableOwedSpace = Math.max(0, owedAmount - existingOwed);
+          const toOwed = Math.min(half, availableOwedSpace);
+          const overflowToCommission = Math.max(0, half - toOwed);
+
+          const newCommissionBalance = existingCommission + half + overflowToCommission;
+          const newOwedBalance = existingOwed + toOwed;
+
+          await Driver.findByIdAndUpdate(driver._id, {
+            commissionBalance: newCommissionBalance,
+            owedBalance: newOwedBalance
+          });
+
+          console.log(`Temporary driver ${driver.name}: commission +Br ${half.toFixed(2)}, owed +Br ${toOwed.toFixed(2)}, overflow to commission +Br ${overflowToCommission.toFixed(2)}. Commission: ${newCommissionBalance.toFixed(2)}, Owed: ${newOwedBalance.toFixed(2)}`);
+        } else {
+          // Regular drivers: full commission
+          const updatedCommissionBalance = Number(driver.commissionBalance || 0) + commission;
+          await Driver.findByIdAndUpdate(driver._id, { commissionBalance: updatedCommissionBalance });
+          console.log(`Added driver commission Br ${commission.toFixed(2)} to ${driver.name}. New balance: Br ${updatedCommissionBalance.toFixed(2)}`);
+        }
       }
     }
 
@@ -249,6 +284,11 @@ router.put('/:id/status', authenticateToken, async (req: Request, res: Response)
  */
 router.get('/export/daily', authenticateToken, async (req: Request, res: Response) => {
   try {
+    const authReq = req as any;
+    if (authReq.user?.username !== 'admin' && authReq.user?.role !== 'ADMIN') {
+      res.status(403).json({ error: 'Permission Denied: Only admin users can export daily dispatch logs.' });
+      return;
+    }
     const { startDate, endDate } = req.query;
 
     let orders = await Order.find();
@@ -283,6 +323,11 @@ router.get('/export/daily', authenticateToken, async (req: Request, res: Respons
  */
 router.get('/export/account/:customerId', authenticateToken, async (req: Request, res: Response) => {
   try {
+    const authReq = req as any;
+    if (authReq.user?.username !== 'admin' && authReq.user?.role !== 'ADMIN') {
+      res.status(403).json({ error: 'Permission Denied: Only admin users can export account statements.' });
+      return;
+    }
     const customer = await Customer.findById(req.params.customerId);
     if (!customer) {
       res.status(404).json({ error: 'Customer not found.' });

@@ -121,6 +121,7 @@ const defaultData: DbData = {
       status: 'BUSY'
     }
   ],
+  
   orders: [
     // Pre-seed some orders for testing
     {

@@ -13,6 +13,10 @@ export interface Driver {
   phone: string;
   status: 'AVAILABLE' | 'BUSY' | 'INACTIVE';
   commissionBalance: number;
+  type?: 'REGULAR' | 'TEMPORARY';
+  owedAmount?: number;
+  owedBalance?: number;
+  userId?: string;
 }
 
 export interface Order {
@@ -34,6 +38,8 @@ export interface User {
   username: string;
   name: string;
   role: string;
+  // initial plain-text password returned at creation (may be undefined after driver changes password)
+  initialPassword?: string;
 }
 
 export interface SmsLog {

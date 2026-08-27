@@ -17,16 +17,19 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
+    console.debug('[auth] No token provided. Authorization header:', authHeader);
     res.status(401).json({ error: 'Access token required' });
     return;
   }
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {
+      console.debug('[auth] Token verification failed:', err && (err as Error).message);
       res.status(403).json({ error: 'Invalid or expired token' });
       return;
     }
     
+    console.debug('[auth] Token verified. Payload:', decoded);
     (req as AuthenticatedRequest).user = decoded as any;
     next();
   });

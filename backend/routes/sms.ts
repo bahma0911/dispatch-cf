@@ -10,6 +10,11 @@ const router = Router();
  * @desc Get all simulated/sent SMS messages
  */
 router.get('/logs', authenticateToken, (req: Request, res: Response) => {
+  const authReq = req as any;
+  if (authReq.user?.username !== 'admin' && authReq.user?.role !== 'ADMIN') {
+    res.status(403).json({ error: 'Permission Denied: Only admin users can view SMS logs.' });
+    return;
+  }
   res.json(smsLogs);
 });
 
@@ -19,6 +24,11 @@ router.get('/logs', authenticateToken, (req: Request, res: Response) => {
  */
 router.get('/config', authenticateToken, (req: Request, res: Response) => {
   try {
+    const authReq = req as any;
+    if (authReq.user?.username !== 'admin' && authReq.user?.role !== 'ADMIN') {
+      res.status(403).json({ error: 'Permission Denied: Only admin users can view SMS configuration.' });
+      return;
+    }
     const config = getActiveConfig();
     res.json(config);
   } catch (err: any) {
@@ -32,6 +42,11 @@ router.get('/config', authenticateToken, (req: Request, res: Response) => {
  */
 router.post('/config', authenticateToken, (req: Request, res: Response) => {
   try {
+    const authReq = req as any;
+    if (authReq.user?.username !== 'admin' && authReq.user?.role !== 'ADMIN') {
+      res.status(403).json({ error: 'Permission Denied: Only admin users can update SMS configuration.' });
+      return;
+    }
     const { localAddress, publicAddress, username, password, deviceId, activeAddressType, simNumber, phoneFormat } = req.body;
     
     const newConfig = {
@@ -58,6 +73,11 @@ router.post('/config', authenticateToken, (req: Request, res: Response) => {
  */
 router.post('/test', authenticateToken, async (req: Request, res: Response) => {
   try {
+    const authReq = req as any;
+    if (authReq.user?.username !== 'admin' && authReq.user?.role !== 'ADMIN') {
+      res.status(403).json({ error: 'Permission Denied: Only admin users can send test SMS messages.' });
+      return;
+    }
     const { testPhone, testMessage } = req.body;
     if (!testPhone) {
       return res.status(400).json({ error: 'Recipient phone number is required' });
