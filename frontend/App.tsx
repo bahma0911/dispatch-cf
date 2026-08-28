@@ -92,6 +92,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [appliedStartDate, setAppliedStartDate] = useState<string>('');
+  const [appliedEndDate, setAppliedEndDate] = useState<string>('');
 
   // Search states for account holder lists
   const [accountHolderSearch, setAccountHolderSearch] = useState<string>('');
@@ -872,6 +874,16 @@ export default function App() {
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
   // Order Filters application
+  const handleApplyDateFilter = () => {
+    if (startDate && endDate && startDate > endDate) {
+      showToast('Start date cannot be after end date.', 'error');
+      return;
+    }
+
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
+  };
+
   const filteredOrders = orders.filter((order) => {
     // Search query matches customer name, driver name, pickup, or delivery
     const cust = order.customer && typeof order.customer === 'object' ? order.customer : null;
@@ -882,8 +894,15 @@ export default function App() {
 
     const matchesStatus = statusFilter ? order.orderStatus === statusFilter : true;
     const matchesPayment = paymentFilter ? order.paymentType === paymentFilter : true;
+    const orderDate = new Date(order.createdAt).getTime();
+    const matchesStartDate = appliedStartDate
+      ? orderDate >= new Date(`${appliedStartDate}T00:00:00`).getTime()
+      : true;
+    const matchesEndDate = appliedEndDate
+      ? orderDate <= new Date(`${appliedEndDate}T23:59:59.999`).getTime()
+      : true;
 
-    return matchesSearch && matchesStatus && matchesPayment;
+    return matchesSearch && matchesStatus && matchesPayment && matchesStartDate && matchesEndDate;
   });
 
   // Render App
@@ -1365,6 +1384,8 @@ export default function App() {
                           setPaymentFilter('');
                           setStartDate('');
                           setEndDate('');
+                          setAppliedStartDate('');
+                          setAppliedEndDate('');
                         }}
                         className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-lg text-sm transition-all"
                       >
@@ -1393,6 +1414,14 @@ export default function App() {
                         onChange={(e) => setEndDate(e.target.value)}
                         className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-xs"
                       />
+                      <button
+                        type="button"
+                        onClick={handleApplyDateFilter}
+                        className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition-colors"
+                      >
+                        <Search className="h-3.5 w-3.5" />
+                        Search
+                      </button>
                     </div>
                   </div>
                 </div>
