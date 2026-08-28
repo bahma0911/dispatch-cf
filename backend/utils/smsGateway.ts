@@ -216,12 +216,12 @@ export function buildCancellationDriverSMS(driverName: string, orderNumber: numb
 /**
  * Build customized SMS text for Customers
  */
-export function buildCustomerSMS(customerName: string, orderNumber: number, driverName: string, driverPhone: string, paymentType: string, fee: number): string {
+export function buildCustomerSMS(customerName: string, orderNumber: number, driverName: string, driverPhone: string, pickup: string, delivery: string, paymentType: string, fee: number): string {
   if (paymentType === 'CREDIT') {
-    return `ሰላም ${customerName}፣ ያዘዙት ዕቃ (ትዕዛዝ ቁጥር #${orderNumber}) ተልኳል። አሽከርካሪ፡- ${driverName} (${driverPhone})። በሂሳብዎ (አካውንት ክሬዲት) ተይዟል። የአገልግሎት ዋጋ፡- ${fee.toFixed(2)} ብር። ዕቃው ሲደርስ ምንም ዓይነት ክፍያ መክፈል አያስፈልግዎትም። እናመሰግናለን!`;
+    return `ሰላም ${customerName}፣ ያዘዙት ዕቃ ትዕዛዝ ቁጥር #${orderNumber} ተልኳል። መነሻ (ፒክአፕ)፡- ${pickup} | ማድረሻ (ዴሊቨሪ)፡ ${delivery}። አሽከርካሪ፡- ${driverName} (${driverPhone})። በሂሳብዎ (አካውንት ክሬዲት) ተይዟል። የአገልግሎት ዋጋ፡- ${fee.toFixed(2)} ብር። ዕቃው ሲደርስ ምንም ዓይነት ክፍያ መክፈል አያስፈልግዎትም። እናመሰግናለን!`;
   }
 
-  return `ሰላም ${customerName}፣ ያዘዙት ዕቃ (ትዕዛዝ ቁጥር #${orderNumber}) ተልኳል። አሽከርካሪ፡- ${driverName} (${driverPhone})። እባክዎ ዕቃው ሲደርስዎ ለአሽከርካሪው ${fee.toFixed(2)} ብር ይክፈሉ። እናመሰግናለን!`;
+  return `ሰላም ${customerName}፣ ያዘዙት ዕቃ ትዕዛዝ ቁጥር #${orderNumber} ተልኳል። አሽከርካሪ፡- ${driverName} (${driverPhone})። እባክዎ ዕቃው ሲደርስዎ ለአሽከርካሪው ${fee.toFixed(2)} ብር ይክፈሉ። እናመሰግናለን!`;
 }
 
 /**
@@ -229,8 +229,8 @@ export function buildCustomerSMS(customerName: string, orderNumber: number, driv
  */
 export function buildDriverSMS(driverName: string, orderNumber: number, customerName: string, customerPhone: string, pickup: string, delivery: string, paymentType: string, fee: number): string {
   if (paymentType === 'CREDIT') {
-    return `ሰላም ${driverName}፣ አዲስ ትዕዛዝ ቁጥር #${orderNumber} ለእርስዎ ተመድቧል። መነሻ (ፒክአፕ)፡- ${pickup} | ማድረሻ (ዴሊቨሪ)፡ ${delivery} | ደንበኛ፡ ${customerName} (${customerPhone})። መመሪያ፡- ዕቃው ሲደርስ ${fee.toFixed(2)} ብር በደንበኛችን ክሬዲት አካውንት ላይ ስለተመዘገበ  ክፍያውን መሰብሰብ አይጠበቅብዎትም።`;
+    return `ሰላም ${driverName}፣ አዲስ ትዕዛዝ ቁጥር #${orderNumber} ለእርስዎ ተመድቧል። መነሻ (ፒክአፕ)፡- ${pickup} | ማድረሻ (ዴሊቨሪ)፡ ${delivery} | ደንበኛ፡- ${customerName} (${customerPhone})። መመሪያ፡- ዕቃው ሲደርስ ${fee.toFixed(2)} ብር በደንበኛችን ክሬዲት አካውንት ላይ ስለተመዘገበ  ክፍያውን መሰብሰብ አይጠበቅብዎትም።`;
   }
 
-  return `ሰላም ${driverName}፣ አዲስ ትዕዛዝ ቁጥር #${orderNumber} ለእርስዎ ተመድቧል። መነሻ (ፒክአፕ)፡- ${pickup} | ማድረሻ (ዴሊቨሪ)፡ ${delivery} | ደንበኛ፡ ${customerName} (${customerPhone})። መመሪያ፡- ዕቃው ሲደርስ ${fee.toFixed(2)} ብር ይሰብስቡ።`;
+  return `ሰላም ${driverName}፣ አዲስ ትዕዛዝ ቁጥር #${orderNumber} ለእርስዎ ተመድቧል። መነሻ (ፒክአፕ)፡- ${pickup} | ማድረሻ (ዴሊቨሪ)፡ ${delivery} | ደንበኛ፡- ${customerName} (${customerPhone})። መመሪያ፡- ዕቃው ሲደርስ ${fee.toFixed(2)} ብር ይሰብስቡ።`;
 }

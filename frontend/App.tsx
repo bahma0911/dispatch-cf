@@ -731,6 +731,10 @@ export default function App() {
 
   // Order Status & Payment Status updates
   const handleUpdateOrderStatus = async (orderId: string, orderStatus: string, paymentStatus?: string) => {
+    if (orderStatus === 'CANCELLED' && !window.confirm('Are you sure you want to cancel this order?')) {
+      return;
+    }
+
     try {
       const res = await fetch(`/api/orders/${orderId}/status`, {
         method: 'PUT',

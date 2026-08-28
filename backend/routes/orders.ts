@@ -146,6 +146,8 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       populatedOrder.orderNumber,
       driver.name,
       driver.phone,
+      pickupAddress,
+      deliveryAddress,
       finalPaymentType,
       Number(fee)
     );
