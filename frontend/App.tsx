@@ -783,8 +783,11 @@ export default function App() {
   const downloadDailyLogExcel = async () => {
     try {
       let url = '/api/orders/export/daily';
-      if (startDate || endDate) {
-        url += `?startDate=${startDate}&endDate=${endDate}`;
+      if (appliedStartDate || appliedEndDate) {
+        const params = new URLSearchParams();
+        if (appliedStartDate) params.set('startDate', appliedStartDate);
+        if (appliedEndDate) params.set('endDate', appliedEndDate);
+        url += `?${params.toString()}`;
       }
 
       const res = await fetch(url, { headers: getAuthHeaders() });
@@ -796,8 +799,8 @@ export default function App() {
       const fileUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = fileUrl;
-      const startTag = startDate || 'All';
-      const endTag = endDate || 'Present';
+      const startTag = appliedStartDate || 'All';
+      const endTag = appliedEndDate || 'Present';
       a.download = `Dispatch_Log_${startTag}_to_${endTag}.xlsx`;
       document.body.appendChild(a);
       a.click();

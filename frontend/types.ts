@@ -26,6 +26,8 @@ export interface Order {
   driver: Driver | string;
   pickupAddress: string;
   deliveryAddress: string;
+  pickupCoordinates?: { lat: number; lon: number };
+  deliveryCoordinates?: { lat: number; lon: number };
   fee: number;
   paymentType: 'CASH' | 'CREDIT';
   paymentStatus: 'UNPAID' | 'PAID' | 'SETTLED';

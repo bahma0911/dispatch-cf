@@ -7,6 +7,8 @@ export interface IOrder {
   driver: string; // Ref: Driver id
   pickupAddress: string;
   deliveryAddress: string;
+  pickupCoordinates?: { lat: number; lon: number };
+  deliveryCoordinates?: { lat: number; lon: number };
   fee: number;
   paymentType: 'CASH' | 'CREDIT';
   paymentStatus: 'UNPAID' | 'PAID' | 'SETTLED';

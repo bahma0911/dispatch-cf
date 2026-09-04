@@ -47,7 +47,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     // Apply date filters if provided
     if (startDate || endDate) {
       const start = startDate ? new Date(startDate as string).getTime() : 0;
-      const end = endDate ? new Date(endDate as string).getTime() : Infinity;
+      const end = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : Infinity;
 
       orders = orders.filter((order) => {
         const orderTime = new Date(order.createdAt).getTime();
@@ -297,7 +297,7 @@ router.get('/export/daily', authenticateToken, async (req: Request, res: Respons
 
     if (startDate || endDate) {
       const start = startDate ? new Date(startDate as string).getTime() : 0;
-      const end = endDate ? new Date(endDate as string).getTime() : Infinity;
+      const end = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : Infinity;
 
       orders = orders.filter((order) => {
         const orderTime = new Date(order.createdAt).getTime();
