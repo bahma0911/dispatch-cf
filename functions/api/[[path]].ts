@@ -84,8 +84,11 @@ async function collections(c: AppContext, names: string[]) {
 }
 
 async function orderPage(c: AppContext, offset: number, limit: number) {
-  const result = await c.env.DB.prepare("SELECT data FROM records WHERE collection = 'orders' ORDER BY CAST(json_extract(data, '$.orderNumber') AS INTEGER) DESC LIMIT ? OFFSET ?").bind(limit, offset).all<{ data: string }>();
-  return (result.results || []).map((row) => JSON.parse(row.data));
+  const result = await c.env.DB.prepare("SELECT orders.data, customer.data AS customer_data, driver.data AS driver_data FROM records AS orders LEFT JOIN records AS customer ON customer.collection = 'customers' AND customer.id = json_extract(orders.data, '$.customer') LEFT JOIN records AS driver ON driver.collection = 'drivers' AND driver.id = json_extract(orders.data, '$.driver') WHERE orders.collection = 'orders' ORDER BY CAST(json_extract(orders.data, '$.orderNumber') AS INTEGER) DESC LIMIT ? OFFSET ?").bind(limit, offset).all<{ data: string; customer_data?: string; driver_data?: string }>();
+  return (result.results || []).map((row) => {
+    const order = JSON.parse(row.data);
+    return { ...order, customer: row.customer_data ? JSON.parse(row.customer_data) : order.customer, driver: row.driver_data ? JSON.parse(row.driver_data) : order.driver };
+  });
 }
 
 async function findOne(c: AppContext, name: string, predicate: (value: RecordValue) => boolean) {
@@ -120,9 +123,7 @@ async function auth(c: AppContext, next: Next) {
   const token = c.req.header('Authorization')?.split(' ')[1];
   const user = token ? await readToken(token, c.env.JWT_SECRET || 'delivery-app-secure-jwt-secret-key-2026') : null;
   if (!user) return c.json({ error: token ? 'Invalid or expired token' : 'Access token required' }, token ? 403 : 401);
-  const record = await findById(c, 'users', user.userId);
-  if (!record) return c.json({ error: 'User not found' }, 401);
-  c.set('user', record as User);
+  c.set('user', user as User);
   await next();
 }
 
