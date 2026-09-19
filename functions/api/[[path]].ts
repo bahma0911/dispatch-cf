@@ -75,6 +75,14 @@ async function collection(c: AppContext, name: string): Promise<RecordValue[]> {
   return (result.results || []).map((row) => JSON.parse(row.data));
 }
 
+async function collections(c: AppContext, names: string[]) {
+  const placeholders = names.map(() => '?').join(', ');
+  const result = await c.env.DB.prepare(`SELECT collection, data FROM records WHERE collection IN (${placeholders})`).bind(...names).all<{ collection: string; data: string }>();
+  const values = new Map(names.map((name) => [name, [] as RecordValue[]]));
+  for (const row of result.results || []) values.get(row.collection)?.push(JSON.parse(row.data));
+  return values;
+}
+
 async function findOne(c: AppContext, name: string, predicate: (value: RecordValue) => boolean) {
   return (await collection(c, name)).find(predicate) || null;
 }
@@ -144,11 +152,7 @@ function csv(rows: RecordValue[]) {
   return [columns.join(','), ...rows.map((row) => columns.map((column) => JSON.stringify(row[column] ?? '')).join(','))].join('\n');
 }
 
-app.all('*', async (c, next) => {
-  if (c.req.path === '/api/health') return next();
-  await ensureSeed(c);
-  return next();
-});
+app.all('*', async (c, next) => next());
 
 app.get('/api/health', (c) => c.json({ status: 'ok', database: 'cloudflare-d1', timestamp: new Date().toISOString() }));
 
@@ -212,8 +216,7 @@ app.post('/api/drivers/:id/settle', auth, async (c) => { const driver = await fi
 app.get('/api/drivers/export/commission', auth, async (c) => c.body(csv(await collection(c, 'drivers')), 200, { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename=Driver_Commission_Report.csv' }));
 
 app.get('/api/orders', auth, async (c) => {
-  const query = c.req.query(); let orders = await collection(c, 'orders'); const user = c.get('user');
-  const [customers, drivers] = await Promise.all([collection(c, 'customers'), collection(c, 'drivers')]);
+  const query = c.req.query(); const loaded = await collections(c, ['orders', 'customers', 'drivers']); let orders = loaded.get('orders') || []; const customers = loaded.get('customers') || []; const drivers = loaded.get('drivers') || []; const user = c.get('user');
   if (query.status) orders = orders.filter((item) => item.orderStatus === query.status); if (query.paymentType) orders = orders.filter((item) => item.paymentType === query.paymentType); if (query.paymentStatus) orders = orders.filter((item) => item.paymentStatus === query.paymentStatus);
   if (user.role === 'DRIVER') { const driver = await findOne(c, 'drivers', (item) => item.userId === user._id); if (!driver) return c.json({ error: 'Driver profile not found for user.' }, 404); orders = orders.filter((item) => item.driver === driver._id); }
   if (query.startDate) orders = orders.filter((item) => new Date(item.createdAt).getTime() >= new Date(query.startDate).getTime()); if (query.endDate) orders = orders.filter((item) => new Date(item.createdAt).getTime() <= new Date(`${query.endDate}T23:59:59.999`).getTime());
