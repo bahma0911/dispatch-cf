@@ -79,6 +79,11 @@ async function findOne(c: AppContext, name: string, predicate: (value: RecordVal
   return (await collection(c, name)).find(predicate) || null;
 }
 
+async function findById(c: AppContext, name: string, valueId: string) {
+  const result = await c.env.DB.prepare('SELECT data FROM records WHERE collection = ? AND id = ? LIMIT 1').bind(name, valueId).first<{ data: string }>();
+  return result ? JSON.parse(result.data) : null;
+}
+
 async function save(c: AppContext, name: string, value: RecordValue) {
   await c.env.DB.prepare('INSERT OR REPLACE INTO records (collection, id, data, created_at) VALUES (?, ?, ?, ?)').bind(name, value._id, JSON.stringify(value), value.createdAt || new Date().toISOString()).run();
   return value;
@@ -91,7 +96,8 @@ async function update(c: AppContext, name: string, key: string, changes: RecordV
 }
 
 async function ensureSeed(c: AppContext) {
-  if (await findOne(c, 'users', (user) => user.username === 'admin')) return;
+  const existingAdmin = await c.env.DB.prepare("SELECT 1 AS found FROM records WHERE collection = 'users' AND json_extract(data, '$.username') = 'admin' LIMIT 1").first();
+  if (existingAdmin) return;
   const passwordHash = await hashPassword('password123', 'default-dispatch-password');
   await save(c, 'users', { _id: id('usr'), username: 'admin', passwordHash, name: 'Abebe Kebede (Admin)', role: 'ADMIN' });
   await save(c, 'users', { _id: id('usr'), username: 'dispatch', passwordHash, name: 'Almaz Tesfaye (Dispatch)', role: 'DISPATCHER' });
@@ -101,7 +107,7 @@ async function auth(c: AppContext, next: Next) {
   const token = c.req.header('Authorization')?.split(' ')[1];
   const user = token ? await readToken(token, c.env.JWT_SECRET || 'delivery-app-secure-jwt-secret-key-2026') : null;
   if (!user) return c.json({ error: token ? 'Invalid or expired token' : 'Access token required' }, token ? 403 : 401);
-  const record = await findOne(c, 'users', (item) => item._id === user.userId);
+  const record = await findById(c, 'users', user.userId);
   if (!record) return c.json({ error: 'User not found' }, 401);
   c.set('user', record as User);
   await next();
