@@ -122,6 +122,16 @@ async function populatedOrder(c: AppContext, order: RecordValue) {
   return { ...order, customer: customer || order.customer, driver: driver || order.driver };
 }
 
+function populateOrders(orders: RecordValue[], customers: RecordValue[], drivers: RecordValue[]) {
+  const customerById = new Map(customers.map((customer) => [customer._id, customer]));
+  const driverById = new Map(drivers.map((driver) => [driver._id, driver]));
+  return orders.map((order) => ({
+    ...order,
+    customer: typeof order.customer === 'object' ? order.customer : customerById.get(order.customer) || order.customer,
+    driver: typeof order.driver === 'object' ? order.driver : driverById.get(order.driver) || order.driver
+  }));
+}
+
 function csv(rows: RecordValue[]) {
   if (!rows.length) return '';
   const columns = Object.keys(rows[0]);
@@ -197,10 +207,11 @@ app.get('/api/drivers/export/commission', auth, async (c) => c.body(csv(await co
 
 app.get('/api/orders', auth, async (c) => {
   const query = c.req.query(); let orders = await collection(c, 'orders'); const user = c.get('user');
+  const [customers, drivers] = await Promise.all([collection(c, 'customers'), collection(c, 'drivers')]);
   if (query.status) orders = orders.filter((item) => item.orderStatus === query.status); if (query.paymentType) orders = orders.filter((item) => item.paymentType === query.paymentType); if (query.paymentStatus) orders = orders.filter((item) => item.paymentStatus === query.paymentStatus);
   if (user.role === 'DRIVER') { const driver = await findOne(c, 'drivers', (item) => item.userId === user._id); if (!driver) return c.json({ error: 'Driver profile not found for user.' }, 404); orders = orders.filter((item) => item.driver === driver._id); }
   if (query.startDate) orders = orders.filter((item) => new Date(item.createdAt).getTime() >= new Date(query.startDate).getTime()); if (query.endDate) orders = orders.filter((item) => new Date(item.createdAt).getTime() <= new Date(`${query.endDate}T23:59:59.999`).getTime());
-  return c.json((await Promise.all(orders.map((order) => populatedOrder(c, order)))).sort((a: any, b: any) => (b.orderNumber || 0) - (a.orderNumber || 0)));
+  return c.json(populateOrders(orders, customers, drivers).sort((a: any, b: any) => (b.orderNumber || 0) - (a.orderNumber || 0)));
 });
 app.post('/api/orders', auth, async (c) => {
   const data = await body(c); if ((!data.customerId && !data.walkInCustomer) || !data.driverId || !data.pickupAddress || !data.deliveryAddress || data.fee === undefined) return c.json({ error: 'Customer, driver, pickup address, delivery address, and fee are required.' }, 400);
