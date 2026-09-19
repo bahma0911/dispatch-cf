@@ -6,7 +6,7 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "dispatch-cf"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "86247c5f-1400-47de-97ee-0eaaf4a91229"
 migrations_dir = "migrations"
 
 [vars]
