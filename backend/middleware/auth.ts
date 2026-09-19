@@ -29,7 +29,6 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
       return;
     }
     
-    console.debug('[auth] Token verified. Payload:', decoded);
     (req as AuthenticatedRequest).user = decoded as any;
     next();
   });
