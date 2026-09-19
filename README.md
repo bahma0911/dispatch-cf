@@ -9,10 +9,11 @@ This platform allows company dispatchers (Staff/Admins) to register customers, m
 ## 🛠️ Tech Stack & Architecture
 
 - **Frontend**: React 19, Tailwind CSS, Lucide Icons, and Motion.
-- **Backend**: Node.js, Express, TypeScript, and Bundled via `esbuild`.
-- **Database**: MongoDB Atlas in production, with a local JSON fallback when `MONGODB_URI` is omitted.
-- **Security**: JWT-based Authentication and password hashing via `bcryptjs`.
-- **Integrations**: Excel compilation via SheetJS (`xlsx`) and Basic Auth Android SMS Gateway protocol.
+- **Frontend**: React 19, Vite, Tailwind CSS, Lucide Icons, and Motion on Cloudflare Pages.
+- **Backend**: Cloudflare Pages Functions with Hono and Web Crypto; the Node/Express server remains available for local development.
+- **Database**: Cloudflare D1 in production, with the local JSON/MongoDB-compatible adapter for Node development.
+- **Security**: Web Crypto PBKDF2 password hashing and HMAC-signed JWT authentication on Workers.
+- **Integrations**: CSV report downloads and Basic Auth Android SMS Gateway protocol.
 
 ---
 
@@ -116,13 +117,12 @@ Outgoing SMS are sent using an HTTP Basic Auth `POST` request matching the admin
 ## 🚀 Setup & Local Execution Instructions
 
 ### 1. Configure Environment Variables (`.env`)
-Create a `.env` file at the root of the project, or add these variables in Render:
+Create a `.env` file at the root of the project for local Node development, or
+configure the equivalent Cloudflare Pages variables/secrets:
 ```env
 PORT=3000
 NODE_ENV=production
 APP_URL=https://nega.bahma.com.et
-MONGODB_URI=mongodb+srv://<db_username>:<db_password>@group.sovx7as.mongodb.net/?appName=nega
-MONGODB_DB_NAME=nega
 JWT_SECRET="replace-with-a-long-random-secret"
 
 # Android SMS Gateway credentials
@@ -132,7 +132,25 @@ SMS_GATEWAY_PASSWORD="gateway-password"
 SMS_GATEWAY_DEVICE_ID="android-device-identifier-1"
 ```
 
-On Render, use `npm install` as the build command and `npm run build` as the build step if dependencies are not installed automatically. Use `npm start` as the start command. Add `nega.bahma.com.et` as a custom domain and point its DNS record to the hostname Render provides.
+### Cloudflare Pages deployment
+
+Production uses Cloudflare Pages for the Vite frontend, Pages Functions for
+the `/api/*` backend, and Cloudflare D1 for persistence. The legacy
+Node/Express server remains available for local development and is not used by
+Pages.
+
+1. Authenticate Wrangler with `npx wrangler login`.
+2. Create the D1 database with `npx wrangler d1 create dispatch-cf`.
+3. Copy the returned database ID into `wrangler.toml`, replacing
+  `REPLACE_WITH_D1_DATABASE_ID`.
+4. Apply the schema with `npx wrangler d1 migrations apply dispatch-cf --remote`.
+5. Set production secrets with `npx wrangler pages secret put JWT_SECRET --project-name dispatch-cf` and repeat for `SMS_GATEWAY_PASSWORD` if live SMS is enabled.
+6. Create the Pages project with `npx wrangler pages project create dispatch-cf`, then deploy with `npm run deploy`.
+
+In the Cloudflare dashboard, use `npm run build` as the build command and
+`dist` as the output directory. The Pages Function and frontend share one
+origin, so the existing relative `/api` requests work without a separate API
+URL or CORS setup.
 
 ### 2. Boot Up Development Servers
 Launch both Vite and Express concurrent routing inside the sandbox or your console:

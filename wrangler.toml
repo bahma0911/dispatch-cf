@@ -1,0 +1,15 @@
+name = "dispatch-cf"
+compatibility_date = "2026-09-19"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dispatch-cf"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+SMS_GATEWAY_ADDRESS = ""
+SMS_GATEWAY_USERNAME = ""
+SMS_GATEWAY_DEVICE_ID = ""
