@@ -83,6 +83,11 @@ async function collections(c: AppContext, names: string[]) {
   return values;
 }
 
+async function orderPage(c: AppContext, offset: number, limit: number) {
+  const result = await c.env.DB.prepare("SELECT data FROM records WHERE collection = 'orders' ORDER BY CAST(json_extract(data, '$.orderNumber') AS INTEGER) DESC LIMIT ? OFFSET ?").bind(limit, offset).all<{ data: string }>();
+  return (result.results || []).map((row) => JSON.parse(row.data));
+}
+
 async function findOne(c: AppContext, name: string, predicate: (value: RecordValue) => boolean) {
   return (await collection(c, name)).find(predicate) || null;
 }
@@ -216,7 +221,7 @@ app.post('/api/drivers/:id/settle', auth, async (c) => { const driver = await fi
 app.get('/api/drivers/export/commission', auth, async (c) => c.body(csv(await collection(c, 'drivers')), 200, { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename=Driver_Commission_Report.csv' }));
 
 app.get('/api/orders', auth, async (c) => {
-  const query = c.req.query(); const loaded = await collections(c, ['orders', 'customers', 'drivers']); let orders = loaded.get('orders') || []; const customers = loaded.get('customers') || []; const drivers = loaded.get('drivers') || []; const user = c.get('user');
+  const query = c.req.query(); const offset = Math.max(0, Number(query.offset || 0)); const limit = Math.min(100, Math.max(1, Number(query.limit || 100))); let orders = await orderPage(c, offset, limit); const loaded = await collections(c, ['customers', 'drivers']); const customers = loaded.get('customers') || []; const drivers = loaded.get('drivers') || []; const user = c.get('user');
   if (query.status) orders = orders.filter((item) => item.orderStatus === query.status); if (query.paymentType) orders = orders.filter((item) => item.paymentType === query.paymentType); if (query.paymentStatus) orders = orders.filter((item) => item.paymentStatus === query.paymentStatus);
   if (user.role === 'DRIVER') { const driver = await findOne(c, 'drivers', (item) => item.userId === user._id); if (!driver) return c.json({ error: 'Driver profile not found for user.' }, 404); orders = orders.filter((item) => item.driver === driver._id); }
   if (query.startDate) orders = orders.filter((item) => new Date(item.createdAt).getTime() >= new Date(query.startDate).getTime()); if (query.endDate) orders = orders.filter((item) => new Date(item.createdAt).getTime() <= new Date(`${query.endDate}T23:59:59.999`).getTime());
